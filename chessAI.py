@@ -10,10 +10,10 @@ class MainWindow(QWidget):
     def __init__(self):
         super().__init__()
 
-        self.setGeometry(2000, 100, 600, 600)
+        self.setGeometry(2000, 100, 800, 800)
 
         self.widgetSvg = QSvgWidget(parent=self)
-        self.widgetSvg.setGeometry(10, 10, 500, 500)
+        self.widgetSvg.setGeometry(0, 0, 800, 800)
         self.chessboard = chess.Board()
         self.chessboardSvg = chess.svg.board(self.chessboard).encode("UTF-8")
         self.widgetSvg.load(self.chessboardSvg)
@@ -24,10 +24,14 @@ def makeMove(move: chess.Move, window: MainWindow):
         from_square=move.from_square, to_square=move.to_square))
     window.chessboardSvg = chess.svg.board(window.chessboard).encode("UTF-8")
     window.widgetSvg.load(window.chessboardSvg)
-    window.update()
+    # window.update()
+    window.repaint()
 
 
 def evaluationFunction(board: chess.Board):
+
+    if chess.Board.is_fifty_moves(board) or chess.Board.is_repetition(board) :
+        return -500
 
     if len(list(board.legal_moves)) == 0 :
         if board.turn == chess.BLACK :
@@ -45,21 +49,46 @@ def evaluationFunction(board: chess.Board):
 
 def calcPieceDiff(piece: chess.PieceType, board: chess.Board) -> int:
     return len(chess.Board.pieces(board, piece, chess.BLACK)) - len(chess.Board.pieces(board, piece, chess.WHITE))
-                      
+
+# Could add checks              
+def sortMoveList(moves: chess.LegalMoveGenerator, board: chess.Board) :
+    attackers = []
+    nonAttackers = []
+    for move in moves:
+        valBefore = evaluationFunction(board=board)
+        board.push(move)
+        valafter = evaluationFunction(board=board)
+        board.pop()
+        if valBefore != valafter :
+            attackers.append(move)
+        else:
+            nonAttackers.append(move)           
+    return (attackers, nonAttackers)
+
 
 
 def minMax(board: chess.Board, depth: int, prevMove: chess.Move, alpha: int, beta: int):
+    
+    result = sortMoveList(board.legal_moves, board)
+    attackMoves = result[0]
+    noAttackMoves = result[1]
 
-    if depth == 0 or len(list(board.legal_moves)) == 0:
+    sortedMoves = []
+    if depth == -1 :
         return (prevMove, evaluationFunction(board=board))
+    if depth == 0 and len(attackMoves) + len(noAttackMoves) == 0:
+        return (prevMove, evaluationFunction(board=board))
+    elif depth == 0 and len(attackMoves) != 0:
+        sortedMoves = attackMoves
+    elif depth != 0 and len(attackMoves) + len(noAttackMoves) != 0:
+        # Makes the algorithm pick attacks first 
+        sortedMoves = attackMoves + noAttackMoves
 
     # MAX
     if board.turn == chess.BLACK :
        value = -1000
        bestMov = prevMove
-       for mov in board.legal_moves:
-            # mov_con = chess.Move.from_uci(str(mov))
-            # makeMove(mov_con, window=window)
+       for mov in sortedMoves:
             board.push(mov)
             currentVal = minMax(board=board,depth=depth-1, prevMove=mov, alpha=alpha, beta=beta)[1]
             board.pop()
@@ -74,9 +103,7 @@ def minMax(board: chess.Board, depth: int, prevMove: chess.Move, alpha: int, bet
     elif board.turn == chess.WHITE :
         value = 1000
         bestMov = prevMove
-        for mov in board.legal_moves:
-            # mov_con = chess.Move.from_uci(str(mov))
-            # makeMove(mov_con, window=window)
+        for mov in sortedMoves:
             board.push(mov)
             currentVal = minMax(board=board,depth=depth-1, prevMove=mov, alpha=alpha, beta=beta)[1]
             board.pop()
@@ -105,16 +132,18 @@ if __name__ == "__main__":
     while(True):
     
         if (window.chessboard.turn):
-            move = input()
+            move = input("Enter move: ")
 
             if not legalMove(window.chessboard, move) :
                 print("Invalid move",move)
                 continue
         else:
-            result = minMax(window.chessboard, 5, None, alpha=-1000, beta=1000)
+            result = minMax(window.chessboard, 4, None, alpha=-1000, beta=1000)
             move = result[0]
-            print("AB_pred:",move,result[1])
+            print("AB end prediciton:",result[1])
+            print("AI move", move)
             print("Current value:",evaluationFunction(window.chessboard))
+            print("-"*20)
 
         makeMove(chess.Move.from_uci(str(move)), window)
         
