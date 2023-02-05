@@ -7,3 +7,4 @@ look over heuristic
 multi threading
 ladda in open book moves
 skriv ut vilket depth lösninge hittade på
+justerbara parametrar under körning
