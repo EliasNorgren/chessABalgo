@@ -68,7 +68,10 @@ def sortMoveList(moves: chess.LegalMoveGenerator, board: chess.Board) :
 
 
 def minMax(board: chess.Board, depth: int, prevMove: chess.Move, alpha: int, beta: int):
-    
+
+    if prevMove != None and str(chess.Move.from_uci(str(prevMove))) == "b1c3" :
+        print("IN",str(chess.Move.from_uci(str(prevMove))))
+
     result = sortMoveList(board.legal_moves, board)
     attackMoves = result[0]
     noAttackMoves = result[1]
@@ -138,7 +141,7 @@ if __name__ == "__main__":
                 print("Invalid move",move)
                 continue
         else:
-            result = minMax(window.chessboard, 4, None, alpha=-1000, beta=1000)
+            result = minMax(window.chessboard, 3, None, alpha=-1000, beta=1000)
             move = result[0]
             print("AB end prediciton:",result[1])
             print("AI move", move)

@@ -1,18 +1,3 @@
-responsive gui
-buttons for changing tiles
-colors for recent move
-stepping back and forward moves
-Early stopping
-look over heuristic
-sortera attack listan beroende på pjäsens värde 
-multi threading
-ladda in open book moves
-skriv ut vilket depth lösninge hittade på
-justerbara parametrar under körning
-promotion funkar inte
-
-
-
 Enter move: d2d4
 AB end prediciton: 1000
 AI move e7e6
