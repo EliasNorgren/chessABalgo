@@ -10,7 +10,7 @@ class MainWindow(QWidget):
     def __init__(self):
         super().__init__()
         self.boardSize = 800
-        self.setGeometry(2000, 100, self.boardSize, self.boardSize)
+        self.setGeometry(0, 0, self.boardSize, self.boardSize)
 
         self.widgetSvg = QSvgWidget(parent=self)
         self.widgetSvg.setGeometry(0, 0, self.boardSize, self.boardSize)
@@ -75,7 +75,19 @@ def get_row_number(y, lowest, highest, separation):
 def makeMove(move: chess.Move, window: MainWindow):
     window.chessboard.push(chess.Move(
         from_square=move.from_square, to_square=move.to_square))
-    window.chessboardSvg = chess.svg.board(window.chessboard).encode("UTF-8")
+    
+    if window.chessboard.is_check():
+        window.chessboardSvg = chess.svg.board(
+            window.chessboard,
+            lastmove=move,
+            check=window.chessboard.king(window.chessboard.turn)  
+        ).encode("UTF-8")
+    else :
+        window.chessboardSvg = chess.svg.board(
+            window.chessboard,
+            lastmove=move,
+            check=None    
+        ).encode("UTF-8")
     window.widgetSvg.load(window.chessboardSvg)
     # window.update()
     window.repaint()
