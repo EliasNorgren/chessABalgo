@@ -8,4 +8,5 @@ ladda in open book moves
 skriv ut vilket depth lösninge hittade på
 justerbara parametrar under körning
 promotion funkar inte
-iterative deepening är ett måste för end game
+iterative deepening är ett måste för end game  
+AI verkar ge upp vid vissa check scenarios

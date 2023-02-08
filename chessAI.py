@@ -35,24 +35,23 @@ class MainWindow(QWidget):
             return
         if not self.AIStart:
             self.running = True
-            if humanMove(self,event):
+            if humanMove(self, event):
                 AIMove(self.chessboard, self.deph, self)
-            
+
             self.AIsTurn = False
             self.running = False
         else:
             self.running = True
-            if(humanMove(self, event)):
+            if (humanMove(self, event)):
                 AIMove(self.chessboard, self.deph, self)
             self.running = False
 
 
-
-def AIMove(chessboard : chess.Board, depth, window:MainWindow):
+def AIMove(chessboard: chess.Board, depth, window: MainWindow):
     print("Thinking")
     result = minMax(chessboard, depth, None, alpha=-1000, beta=1000)
     if (result[0] == None):
-        print(chessboard.move_stack)
+        print("AI did not find move ", chessboard.move_stack)
         return
     makeMove(chess.Move.from_uci(str(result[0])), window)
     print("AB end prediciton:", result[1])
@@ -84,7 +83,7 @@ def humanMove(self, event):
     makeMove(chess.Move.from_uci(str(self.chessMove)), window)
     self.chessMove = ""
     return True
-    
+
 
 def getSquare(event, lowest, highest):
     separation = (highest - lowest) / 8
@@ -133,7 +132,10 @@ def makeMove(move: chess.Move, window: MainWindow):
 def evaluationFunction(board: chess.Board):
 
     if chess.Board.is_fifty_moves(board) or chess.Board.is_repetition(board):
-        return -500
+        if board.turn == chess.WHITE:
+            return 500
+        else:
+            return -500
 
     if len(list(board.legal_moves)) == 0:
         if board.turn == chess.BLACK:
@@ -157,6 +159,7 @@ def calcPieceDiff(piece: chess.PieceType, board: chess.Board) -> int:
 
 def sortMoveList(moves: chess.LegalMoveGenerator, board: chess.Board):
     attackers = []
+    attackers_value = []
     nonAttackers = []
     for move in moves:
         valBefore = evaluationFunction(board=board)
@@ -164,9 +167,18 @@ def sortMoveList(moves: chess.LegalMoveGenerator, board: chess.Board):
         valafter = evaluationFunction(board=board)
         board.pop()
         if valBefore != valafter:
+            # if len(attackers) > 1 :
+            # diff = abs(valBefore - valafter)
+            # for i in range(0, len(attackers)):
+            #     if diff > attackers_value[i]:
+            #         attackers_value.insert(i, diff)
+            #         attackers.insert(i, move)
+            #         break
             attackers.append(move)
+            # attackers_value.append(diff)
         else:
             nonAttackers.append(move)
+
     return (attackers, nonAttackers)
 
 
@@ -184,7 +196,7 @@ def minMax(board: chess.Board, depth: int, prevMove: chess.Move, alpha: int, bet
             print("is 1000 1")
         return value
     # Regular base case
-    elif depth == 0 or len(attackMoves) + len(noAttackMoves) == 0:
+    elif depth == 0 or len(attackMoves) + len(noAttackMoves) == 0 or chess.Board.is_fifty_moves(board) or chess.Board.is_repetition(board):
         value = (prevMove, evaluationFunction(board=board))
         if (value == 1000):
             print("is 1000 1")
@@ -248,9 +260,12 @@ def legalMove(board: chess.Board, move: str):
 if __name__ == "__main__":
     app = QApplication([])
     AIstart = False
-    if sys.argv[1] == "white":
-        AIstart = True
-    window = MainWindow(AIStart=AIstart, depth=int(sys.argv[2]))
+    # if sys.argv[1] == "white":
+    #     AIstart = True
+    AIstart = False
+    # window = MainWindow(AIStart=AIstart, depth=int(sys.argv[2]))
+    window = MainWindow(AIStart=AIstart, depth=1)
+
     # window.AIsTurn= sys.argv[1]
     window.show()
     app.exec()
