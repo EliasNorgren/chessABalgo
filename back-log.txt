@@ -1,5 +1,4 @@
 responsive gui
-colors for recent move
 stepping back and forward moves
 Early stopping
 look over heuristic
@@ -9,4 +8,4 @@ ladda in open book moves
 skriv ut vilket depth lösninge hittade på
 justerbara parametrar under körning
 promotion funkar inte
-swapa vit mot svart
+iterative deepening är ett måste för end game

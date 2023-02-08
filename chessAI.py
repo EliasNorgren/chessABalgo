@@ -3,56 +3,90 @@ import chess.svg
 import random
 import math
 from PyQt5.QtSvg import QSvgWidget
-from PyQt5.QtWidgets import QApplication, QWidget
+from PyQt5.QtWidgets import QApplication, QWidget, QPushButton
+import os
+import sys
 
 
 class MainWindow(QWidget):
-    def __init__(self):
+    def __init__(self, AIStart, depth):
         super().__init__()
         self.boardSize = 800
         self.setGeometry(0, 0, self.boardSize, self.boardSize)
-
+        self.AIStart = AIStart
+        self.deph = depth
         self.widgetSvg = QSvgWidget(parent=self)
         self.widgetSvg.setGeometry(0, 0, self.boardSize, self.boardSize)
         self.chessboard = chess.Board()
         self.chessboardSvg = chess.svg.board(self.chessboard).encode("UTF-8")
         self.widgetSvg.load(self.chessboardSvg)
         self.chessMove = ""
+        self.running = False
+        if AIStart:
+            self.running = True
+            AIMove(self.chessboard, depth, self)
+            self.running = False
+
+        # self.revertMoveButton = QPushButton(text="Revert")
+        # self.revertMoveButton.move(900, 100)
 
     def mousePressEvent(self, event):
-
-        
-        if self.chessMove == "" :
-            self.chessMove = getSquare(event, (self.boardSize*0.075)/2, self.boardSize - (self.boardSize*0.075)/2)
+        if self.running:
             return
-        elif len(self.chessMove) == 2 :
-            self.chessMove = self.chessMove + getSquare(event, (self.boardSize*0.075)/2, self.boardSize - (self.boardSize*0.075)/2)
+        if not self.AIStart:
+            self.running = True
+            if humanMove(self,event):
+                AIMove(self.chessboard, self.deph, self)
             
-        if not legalMove(window.chessboard, self.chessMove) :
-            print("Invalid move",self.chessMove)
-            self.chessMove = ""
-            return
+            self.AIsTurn = False
+            self.running = False
+        else:
+            self.running = True
+            if(humanMove(self, event)):
+                AIMove(self.chessboard, self.deph, self)
+            self.running = False
 
-        # Human move
-        print("Human move :",self.chessMove)
-        if len(list(self.chessboard.legal_moves)) == 0 :
-            print("White lost")
-            return
-        makeMove(chess.Move.from_uci(str(self.chessMove)), window)
+
+
+def AIMove(chessboard : chess.Board, depth, window:MainWindow):
+    print("Thinking")
+    result = minMax(chessboard, depth, None, alpha=-1000, beta=1000)
+    if (result[0] == None):
+        print(chessboard.move_stack)
+        return
+    makeMove(chess.Move.from_uci(str(result[0])), window)
+    print("AB end prediciton:", result[1])
+    print("AI move", result[0])
+    print("Current value:", evaluationFunction(chessboard))
+    print("-"*30)
+
+
+def humanMove(self, event):
+    if self.chessMove == "":
+        self.chessMove = getSquare(
+            event, (self.boardSize*0.075)/2, self.boardSize - (self.boardSize*0.075)/2)
+        return False
+    elif len(self.chessMove) == 2:
+        self.chessMove = self.chessMove + \
+            getSquare(event, (self.boardSize*0.075)/2,
+                      self.boardSize - (self.boardSize*0.075)/2)
+
+    if not legalMove(window.chessboard, self.chessMove):
+        print("Invalid move", self.chessMove)
         self.chessMove = ""
+        return False
 
+    # Human move
+    print("Human move :", self.chessMove)
+    if len(list(self.chessboard.legal_moves)) == 0:
+        print("White lost")
+        return False
+    makeMove(chess.Move.from_uci(str(self.chessMove)), window)
+    self.chessMove = ""
+    return True
+    
 
-        result = minMax(window.chessboard, 3, None, alpha=-1000, beta=1000)
-        if(result[0] == None):
-            print(chess.Board.move_stack)
-            return
-        makeMove(chess.Move.from_uci(str(result[0])),window)
-        print("AB end prediciton:",result[1])
-        print("AI move", result[0])
-        print("Current value:",evaluationFunction(window.chessboard))    
-        print("-"*30)
-
-def getSquare(event, lowest, highest): 
+def getSquare(event, lowest, highest):
     separation = (highest - lowest) / 8
     x = event.pos().x()
     y = event.pos().y()
@@ -60,33 +94,36 @@ def getSquare(event, lowest, highest):
     x_line = get_row_number(y, lowest, highest, separation)
     return y_line + str(x_line)
 
+
 def get_column_letter(x, lowest, highest, separation):
-    for i in range(0,8):
+    for i in range(0, 8):
         if x > lowest and x < highest and x > lowest and x < highest and x > lowest + separation * i and x < lowest + separation * (i + 1):
             return chr(97 + i)
     return ""
 
+
 def get_row_number(y, lowest, highest, separation):
-    for i in range(0,8):
+    for i in range(0, 8):
         if y > lowest and y < highest and y > lowest and y < highest and y > lowest + separation * i and y < lowest + separation * (i+1):
             return 8-i
     return ""
 
+
 def makeMove(move: chess.Move, window: MainWindow):
     window.chessboard.push(chess.Move(
         from_square=move.from_square, to_square=move.to_square))
-    
+
     if window.chessboard.is_check():
         window.chessboardSvg = chess.svg.board(
             window.chessboard,
             lastmove=move,
-            check=window.chessboard.king(window.chessboard.turn)  
+            check=window.chessboard.king(window.chessboard.turn)
         ).encode("UTF-8")
-    else :
+    else:
         window.chessboardSvg = chess.svg.board(
             window.chessboard,
             lastmove=move,
-            check=None    
+            check=None
         ).encode("UTF-8")
     window.widgetSvg.load(window.chessboardSvg)
     # window.update()
@@ -95,13 +132,13 @@ def makeMove(move: chess.Move, window: MainWindow):
 
 def evaluationFunction(board: chess.Board):
 
-    if chess.Board.is_fifty_moves(board) or chess.Board.is_repetition(board) :
+    if chess.Board.is_fifty_moves(board) or chess.Board.is_repetition(board):
         return -500
 
-    if len(list(board.legal_moves)) == 0 :
-        if board.turn == chess.BLACK :
+    if len(list(board.legal_moves)) == 0:
+        if board.turn == chess.BLACK:
             return -1000
-        elif board.turn == chess.WHITE :
+        elif board.turn == chess.WHITE:
             return 1000
 
     pawnDiff = calcPieceDiff(chess.PAWN, board)
@@ -115,8 +152,10 @@ def evaluationFunction(board: chess.Board):
 def calcPieceDiff(piece: chess.PieceType, board: chess.Board) -> int:
     return len(chess.Board.pieces(board, piece, chess.BLACK)) - len(chess.Board.pieces(board, piece, chess.WHITE))
 
-# Could add checks              
-def sortMoveList(moves: chess.LegalMoveGenerator, board: chess.Board) :
+# Could add checks
+
+
+def sortMoveList(moves: chess.LegalMoveGenerator, board: chess.Board):
     attackers = []
     nonAttackers = []
     for move in moves:
@@ -124,12 +163,11 @@ def sortMoveList(moves: chess.LegalMoveGenerator, board: chess.Board) :
         board.push(move)
         valafter = evaluationFunction(board=board)
         board.pop()
-        if valBefore != valafter :
+        if valBefore != valafter:
             attackers.append(move)
         else:
-            nonAttackers.append(move)           
+            nonAttackers.append(move)
     return (attackers, nonAttackers)
-
 
 
 def minMax(board: chess.Board, depth: int, prevMove: chess.Move, alpha: int, beta: int):
@@ -139,77 +177,80 @@ def minMax(board: chess.Board, depth: int, prevMove: chess.Move, alpha: int, bet
     noAttackMoves = result[1]
 
     sortedMoves = []
-    # Quiescence base case 
-    if depth == -1 :
+    # Quiescence base case
+    if depth == -1:
         value = (prevMove, evaluationFunction(board=board))
-        if(value == 1000):
-            print("is 1000 1") 
+        if (value == 1000):
+            print("is 1000 1")
         return value
-    # Regular base case 
+    # Regular base case
     elif depth == 0 or len(attackMoves) + len(noAttackMoves) == 0:
         value = (prevMove, evaluationFunction(board=board))
-        if(value == 1000):
-            print("is 1000 1") 
+        if (value == 1000):
+            print("is 1000 1")
         return value
     # Quiescence continuation
     elif depth == 0 and len(attackMoves) != 0:
         sortedMoves = attackMoves
     # Regular continuation
     elif depth != 0 and len(attackMoves) + len(noAttackMoves) != 0:
-        # Makes the algorithm pick attacks first 
+        # Makes the algorithm pick attacks first
         sortedMoves = attackMoves + noAttackMoves
-    else :
+    else:
         print("WTF")
         exit()
 
     # MAX
-    if board.turn == chess.BLACK :
-       value = -998
-       bestMov = prevMove
-       for mov in sortedMoves:
+    if board.turn == chess.BLACK:
+        value = -998
+        bestMov = prevMove
+        for mov in sortedMoves:
             board.push(mov)
-            currentVal = minMax(board=board,depth=depth-1, prevMove=mov, alpha=alpha, beta=beta)[1]
+            currentVal = minMax(board=board, depth=depth-1,
+                                prevMove=mov, alpha=alpha, beta=beta)[1]
             board.pop()
-            if currentVal > value :
+            if currentVal > value:
                 value = currentVal
                 bestMov = mov
             alpha = max(alpha, value)
-            if value >= beta :
+            if value >= beta:
                 break
-       return (bestMov, value)
+        return (bestMov, value)
     # MIN
-    elif board.turn == chess.WHITE :
+    elif board.turn == chess.WHITE:
         value = 999
         bestMov = prevMove
         for mov in sortedMoves:
             board.push(mov)
-            currentVal = minMax(board=board,depth=depth-1, prevMove=mov, alpha=alpha, beta=beta)[1]
+            currentVal = minMax(board=board, depth=depth-1,
+                                prevMove=mov, alpha=alpha, beta=beta)[1]
             board.pop()
-            if currentVal < value :
+            if currentVal < value:
                 value = currentVal
                 bestMov = mov
             beta = min(beta, value)
-            if currentVal <= alpha :
+            if currentVal <= alpha:
                 break
-            
+
         return (bestMov, value)
 
-def legalMove(board:chess.Board, move: str):
+
+def legalMove(board: chess.Board, move: str):
     found = False
-    for m in list(board.legal_moves) :
+    for m in list(board.legal_moves):
         mov_con = str(chess.Move.from_uci(str(m)))
-        if move == mov_con :
+        if move == mov_con:
             found = True
             break
     return found
 
+
 if __name__ == "__main__":
     app = QApplication([])
-    window = MainWindow()
-    window.show()        
+    AIstart = False
+    if sys.argv[1] == "white":
+        AIstart = True
+    window = MainWindow(AIStart=AIstart, depth=int(sys.argv[2]))
+    # window.AIsTurn= sys.argv[1]
+    window.show()
     app.exec()
-
-
-
-
-    
