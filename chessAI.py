@@ -11,16 +11,15 @@ import chess.engine
 
 
 class MainWindow(QWidget):
-    def __init__(self, AIStart, depth):
+    def __init__(self, AIStart):
         super().__init__()
         self.boardSize = 800
         self.setGeometry(0, 0, self.boardSize, self.boardSize)
         self.AIStart = AIStart
-        self.deph = depth
         self.widgetSvg = QSvgWidget(parent=self)
         self.widgetSvg.setGeometry(0, 0, self.boardSize, self.boardSize)
-        # self.chessboard = chess.Board()
-        self.chessboard = chess.Board(fen="k7/5P2/8/8/8/8/7p/K7 w - - 0 1")
+        self.chessboard = chess.Board()
+        # self.chessboard = chess.Board(fen="r3k3/8/8/8/8/8/8/4K3 w - - 0 1")
 
         self.chessboardSvg = chess.svg.board(self.chessboard).encode("UTF-8")
         self.widgetSvg.load(self.chessboardSvg)
@@ -28,7 +27,7 @@ class MainWindow(QWidget):
         self.running = False
         if AIStart:
             self.running = True
-            AIMove(self.chessboard, depth, self)
+            AIMove(self.chessboard, self)
             self.running = False
 
         # self.revertMoveButton = QPushButton(text="Revert")
@@ -40,37 +39,40 @@ class MainWindow(QWidget):
         if not self.AIStart:
             self.running = True
             if humanMove(self, event):
-                AIMove(self.chessboard, self.deph, self)
+                AIMove(self.chessboard, self)
 
             self.AIsTurn = False
             self.running = False
         else:
             self.running = True
             if (humanMove(self, event)):
-                AIMove(self.chessboard, self.deph, self)
+                AIMove(self.chessboard, self)
             self.running = False
 
 
-def AIMove(chessboard: chess.Board, depth, window: MainWindow):
+def AIMove(chessboard: chess.Board, window: MainWindow):
     print("Thinking")
 
     start = time.perf_counter()
     result = None
-    startingDepth = int(depth)
+    transPositionTable = dict()
+    i = 3
     while True:
-        result = minMax(chessboard, depth=1, prevMove=None, alpha=-1000, beta=1000)
+        result = minMax(chessboard, depth=i, prevMove=None, alpha=-1000, beta=1000, transPositionTable = transPositionTable)
         if (result[0] == None):
             print("AI did not find move ", chessboard.move_stack)
             return
         end = time.perf_counter()
         ms = (end-start)
-        if ms > 6 :
+        print(i, int(ms),result[1], result[2])
+        if ms > 6 or len(list(chessboard.legal_moves)) == 0 or result[1] == -math.inf or result[1] == math.inf :
             break
-        startingDepth = startingDepth + 1
+        i = i + 1
+        
             
     makeMove(chess.Move.from_uci(str(result[0])), window)
     
-    print("AB end prediciton:", result[1], "at depth", result[2], ",", startingDepth)
+    print("AB end prediciton:", result[1], "at depth", result[2], ",", i)
     print("AI move", result[0])
     print("Current value:", evaluationFunction(chessboard))
     print("Time taken", int(ms))
@@ -152,16 +154,13 @@ def makeMove(move: chess.Move, window: MainWindow):
 def evaluationFunction(board: chess.Board):
 
     if chess.Board.is_fifty_moves(board) or chess.Board.is_repetition(board):
-        if board.turn == chess.WHITE:
-            return 500
-        else:
-            return -500
+        return 0
 
     if len(list(board.legal_moves)) == 0:
         if board.turn == chess.BLACK:
-            return -1000
+            return -math.inf
         elif board.turn == chess.WHITE:
-            return 1000
+            return math.inf
 
     pawnDiff = calcPieceDiff(chess.PAWN, board)
     knightDiff = calcPieceDiff(chess.KNIGHT, board) * 3
@@ -202,24 +201,30 @@ def sortMoveList(moves: chess.LegalMoveGenerator, board: chess.Board):
     return (attackers, nonAttackers)
 
 
-def minMax(board: chess.Board, depth: int, prevMove: chess.Move, alpha: int, beta: int):
+def minMax(board: chess.Board, depth: int, prevMove: chess.Move, alpha: int, beta: int, transPositionTable : dict):
+    # if hash(board.fen) in transPositionTable :
+    #     return transPositionTable[hash(board.fen)]
 
     result = sortMoveList(board.legal_moves, board)
     attackMoves = result[0]
     noAttackMoves = result[1]
 
     sortedMoves : chess.Move = []
+
+        # Quiescence continuation
+    if depth == 0 and len(attackMoves) != 0:
+        sortedMoves = attackMoves
     # Quiescence base case
-    if depth == -1:
+    elif depth == -1:
         value = (prevMove, evaluationFunction(board=board), -1)
+        # transPositionTable[hash(board.fen)] = value
         return value
     # Regular base case
     elif depth == 0 or len(attackMoves) + len(noAttackMoves) == 0 or chess.Board.is_fifty_moves(board) or chess.Board.is_repetition(board):
         value = (prevMove, evaluationFunction(board=board), depth)
+        # transPositionTable[hash(board.fen)] = value
         return value
-    # Quiescence continuation
-    elif depth == 0 and len(attackMoves) != 0:
-        sortedMoves = attackMoves
+
     # Regular continuation
     elif depth != 0 and len(attackMoves) + len(noAttackMoves) != 0:
         # Makes the algorithm pick attacks first
@@ -230,14 +235,14 @@ def minMax(board: chess.Board, depth: int, prevMove: chess.Move, alpha: int, bet
 
     # MAX
     if board.turn == chess.BLACK:
-        value = -998
+        value = -math.inf
         bestMov = prevMove
         maxDepth = -math.inf
         
         for mov in sortedMoves:
             mov : chess.Move
             board.push(mov)
-            ret = minMax(board=board, depth=depth-1, prevMove=mov, alpha=alpha, beta=beta)
+            ret = minMax(board=board, depth=depth-1, prevMove=mov, alpha=alpha, beta=beta, transPositionTable=transPositionTable)
             currentVal = ret[1]
             board.pop()
             if currentVal > value:
@@ -250,13 +255,13 @@ def minMax(board: chess.Board, depth: int, prevMove: chess.Move, alpha: int, bet
         return (bestMov, value, maxDepth)
     # MIN
     elif board.turn == chess.WHITE:
-        value = 999
+        value = math.inf
         bestMov = prevMove
         maxDepth = -math.inf
         for mov in sortedMoves:
             mov : chess.Move
             board.push(mov)
-            ret = minMax(board=board, depth=depth-1, prevMove=mov, alpha=alpha, beta=beta)
+            ret = minMax(board=board, depth=depth-1, prevMove=mov, alpha=alpha, beta=beta, transPositionTable=transPositionTable)
             currentVal = ret[1]
             board.pop()
             if currentVal < value:
@@ -283,7 +288,7 @@ if __name__ == "__main__":
     AIstart = False
     if sys.argv[1] == "white":
         AIstart = True
-    window = MainWindow(AIStart=AIstart, depth=sys.argv[2])
+    window = MainWindow(AIStart=AIstart)
     # window = MainWindow(AIStart=AIstart, depth=1)
 
     # window.AIsTurn= sys.argv[1]
