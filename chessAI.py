@@ -6,6 +6,7 @@ from PyQt5.QtSvg import QSvgWidget
 from PyQt5.QtWidgets import QApplication, QWidget, QPushButton
 import os
 import sys
+import timeit
 
 
 class MainWindow(QWidget):
@@ -49,11 +50,14 @@ class MainWindow(QWidget):
 
 def AIMove(chessboard: chess.Board, depth, window: MainWindow):
     print("Thinking")
+
     result = minMax(chessboard, depth, None, alpha=-1000, beta=1000)
     if (result[0] == None):
         print("AI did not find move ", chessboard.move_stack)
         return
+        
     makeMove(chess.Move.from_uci(str(result[0])), window)
+    
     print("AB end prediciton:", result[1])
     print("AI move", result[0])
     print("Current value:", evaluationFunction(chessboard))
@@ -260,11 +264,10 @@ def legalMove(board: chess.Board, move: str):
 if __name__ == "__main__":
     app = QApplication([])
     AIstart = False
-    # if sys.argv[1] == "white":
-    #     AIstart = True
-    AIstart = False
-    # window = MainWindow(AIStart=AIstart, depth=int(sys.argv[2]))
-    window = MainWindow(AIStart=AIstart, depth=1)
+    if sys.argv[1] == "white":
+        AIstart = True
+    window = MainWindow(AIStart=AIstart, depth=int(sys.argv[2]))
+    # window = MainWindow(AIStart=AIstart, depth=1)
 
     # window.AIsTurn= sys.argv[1]
     window.show()
