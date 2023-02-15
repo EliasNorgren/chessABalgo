@@ -5,8 +5,6 @@ look over heuristic
 sortera attack listan beroende på pjäsens värde 
 multi threading
 ladda in open book moves
-skriv ut vilket depth lösninge hittade på
 justerbara parametrar under körning
-promotion funkar inte
 iterative deepening är ett måste för end game  
 AI verkar ge upp vid vissa check scenarios

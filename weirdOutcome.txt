@@ -1,0 +1,21 @@
+AB end prediciton: 0
+AI move g1h3
+Current value: 0
+------------------------------
+Human move : g7g5
+Thinking
+AB end prediciton: 0
+AI move h3g5
+Current value: -1
+------------------------------
+Human move : f7f6
+Thinking
+AB end prediciton: -1
+AI move e2e3
+Current value: -1
+------------------------------
+Human move : f6g5
+Thinking
+AB end prediciton: -1000
+AI move d1h5
+Current value: -1000
