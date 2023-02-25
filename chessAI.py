@@ -8,7 +8,7 @@ import os
 import sys
 import time
 import chess.engine
-
+import chess.polyglot
 
 class MainWindow(QWidget):
     def __init__(self, AIStart):
@@ -51,6 +51,19 @@ class MainWindow(QWidget):
 
 
 def AIMove(chessboard: chess.Board, window: MainWindow):
+
+    max_weight = -math.inf
+    with chess.polyglot.open_reader("performance.bin") as reader:
+        for entry in reader.find_all(window.chessboard):
+            print(entry.move, entry.weight, entry.learn)
+            if entry.weight > max_weight :
+                max_weight = entry.weight
+                move = entry.move
+    if max_weight > -math.inf :
+        makeMove(chess.Move.from_uci(str(move)), window)
+        return
+
+
     print("Thinking")
 
     start = time.perf_counter()
@@ -60,22 +73,22 @@ def AIMove(chessboard: chess.Board, window: MainWindow):
     while True:
         result = minMax(chessboard, depth=i, prevMove=None, alpha=-1000, beta=1000, transPositionTable = transPositionTable)
         if (result[0] == None):
-            print("AI did not find move ", chessboard.move_stack)
-            return
+                print("AI did not find move ", chessboard.move_stack)
+                return
         end = time.perf_counter()
         ms = (end-start)
         print(i, int(ms),result[1], result[2])
         if ms > 6 or len(list(chessboard.legal_moves)) == 0 or result[1] == -math.inf or result[1] == math.inf :
             break
         i = i + 1
-        
+            
             
     makeMove(chess.Move.from_uci(str(result[0])), window)
     
-    print("AB end prediciton:", result[1], "at depth", result[2], ",", i)
+    print("AB end prediciton:", result[1], "at depth", result[2])
     print("AI move", result[0])
     print("Current value:", evaluationFunction(chessboard))
-    print("Time taken", int(ms))
+    # print("Time taken", int(ms))
     print("-"*30)
 
 
@@ -154,6 +167,7 @@ def makeMove(move: chess.Move, window: MainWindow):
 def evaluationFunction(board: chess.Board):
 
     if chess.Board.is_fifty_moves(board) or chess.Board.is_repetition(board):
+        print("Draw found")
         return 0
 
     if len(list(board.legal_moves)) == 0:
@@ -202,27 +216,26 @@ def sortMoveList(moves: chess.LegalMoveGenerator, board: chess.Board):
 
 
 def minMax(board: chess.Board, depth: int, prevMove: chess.Move, alpha: int, beta: int, transPositionTable : dict):
-    # if hash(board.fen) in transPositionTable :
-    #     return transPositionTable[hash(board.fen)]
-
+    # hashVal = hash(str(board.fen) + str(depth))
+    # if hashVal in transPositionTable and depth != 0 and depth != -1:
+    #     # print("Looking up")
+    #     return minMax(board=board, depth=depth-1, prevMove=transPositionTable[hashVal], alpha=alpha, beta=beta, transPositionTable=transPositionTable)
     result = sortMoveList(board.legal_moves, board)
     attackMoves = result[0]
     noAttackMoves = result[1]
 
     sortedMoves : chess.Move = []
 
-        # Quiescence continuation
+    # Quiescence continuation
     if depth == 0 and len(attackMoves) != 0:
         sortedMoves = attackMoves
     # Quiescence base case
     elif depth == -1:
         value = (prevMove, evaluationFunction(board=board), -1)
-        # transPositionTable[hash(board.fen)] = value
         return value
     # Regular base case
     elif depth == 0 or len(attackMoves) + len(noAttackMoves) == 0 or chess.Board.is_fifty_moves(board) or chess.Board.is_repetition(board):
         value = (prevMove, evaluationFunction(board=board), depth)
-        # transPositionTable[hash(board.fen)] = value
         return value
 
     # Regular continuation
@@ -252,6 +265,7 @@ def minMax(board: chess.Board, depth: int, prevMove: chess.Move, alpha: int, bet
             alpha = max(alpha, value)
             if value >= beta:
                 break
+        transPositionTable[hash(str(board.fen) + str(depth))] = ret
         return (bestMov, value, maxDepth)
     # MIN
     elif board.turn == chess.WHITE:
@@ -271,7 +285,7 @@ def minMax(board: chess.Board, depth: int, prevMove: chess.Move, alpha: int, bet
             beta = min(beta, value)
             if currentVal <= alpha:
                 break
-
+        transPositionTable[hash(str(board.fen) + str(depth))] = ret
         return (bestMov, value, maxDepth)
 
 
@@ -286,8 +300,8 @@ def legalMove(board: chess.Board, move: str):
 if __name__ == "__main__":
     app = QApplication([])
     AIstart = False
-    if sys.argv[1] == "white":
-        AIstart = True
+    # if sys.argv[1] == "white":
+        # AIstart = True
     window = MainWindow(AIStart=AIstart)
     # window = MainWindow(AIStart=AIstart, depth=1)
 

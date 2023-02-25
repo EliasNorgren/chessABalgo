@@ -1,10 +1,5 @@
-responsive gui
 stepping back and forward moves
-Early stopping
 look over heuristic
 sortera attack listan beroende på pjäsens värde 
 multi threading
-ladda in open book moves
-justerbara parametrar under körning
-iterative deepening är ett måste för end game  
-AI verkar ge upp vid vissa check scenarios
+ladda in end game moves
