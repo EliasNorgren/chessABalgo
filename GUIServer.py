@@ -15,12 +15,11 @@ BUFFER_SIZE = 1024
 
 
 class MainWindow(QWidget):
-    def __init__(self, AIStart, depth, socket: socket):
+    def __init__(self, AIStart, socket: socket):
         super().__init__()
         self.boardSize = 800
         self.setGeometry(0, 0, self.boardSize, self.boardSize)
         self.AIStart = AIStart
-        self.deph = depth
         self.widgetSvg = QSvgWidget(parent=self)
         self.widgetSvg.setGeometry(0, 0, self.boardSize, self.boardSize)
         self.chessboard = chess.Board()
@@ -28,10 +27,6 @@ class MainWindow(QWidget):
         self.widgetSvg.load(self.chessboardSvg)
         self.chessMove = ""
         self.running = False
-        if AIStart:
-            self.running = True
-            AIMove(self.chessboard, depth, self)
-            self.running = False
         self.socket = socket
 
         # self.revertMoveButton = QPushButton(text="Revert")
@@ -54,7 +49,7 @@ class MainWindow(QWidget):
             self.running = False
 
 
-def AIMove(chessboard: chess.Board, depth, window: MainWindow):
+def AIMove(chessboard: chess.Board, window: MainWindow):
     print("Receiving")
 
     received = window.socket.recv(BUFFER_SIZE)
@@ -82,6 +77,7 @@ def humanMove(self, event):
     if len(list(self.chessboard.legal_moves)) == 0:
         print("White lost")
         return False
+    self.socket.send(self.chessMove)
     makeMove(chess.Move.from_uci(str(self.chessMove)), window)
     self.chessMove = ""
     return True
@@ -261,8 +257,11 @@ def legalMove(board: chess.Board, move: str):
 
 if __name__ == "__main__":
 
+    TCP_IP = '192.168.10.158'
+    TCP_PORT = 3030
+
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.bind((sys.argv[3], sys.argv[3]))
+    s.bind((TCP_IP, TCP_PORT))
     s.listen(1)
 
     conn, addr = s.accept()
@@ -272,9 +271,6 @@ if __name__ == "__main__":
     AIstart = False
     if sys.argv[1] == "white":
         AIstart = True
-    window = MainWindow(AIStart=AIstart, depth=int(sys.argv[2]), socket=conn)
-    # window = MainWindow(AIStart=AIstart, depth=1)
-
-    # window.AIsTurn= sys.argv[1]
+    window = MainWindow(AIStart=AIstart, socket=conn)
     window.show()
     app.exec()

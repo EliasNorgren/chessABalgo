@@ -69,7 +69,7 @@ def AIMove(chessboard: chess.Board, window: MainWindow):
     start = time.perf_counter()
     result = None
     transPositionTable = dict()
-    i = 3
+    i = 2
     while True:
         result = minMax(chessboard, depth=i, prevMove=None, alpha=-1000, beta=1000, transPositionTable = transPositionTable)
         if (result[0] == None):
@@ -78,7 +78,7 @@ def AIMove(chessboard: chess.Board, window: MainWindow):
         end = time.perf_counter()
         ms = (end-start)
         print(i, int(ms),result[1], result[2])
-        if ms > 6 or len(list(chessboard.legal_moves)) == 0 or result[1] == -math.inf or result[1] == math.inf :
+        if ms >= 2 or len(list(chessboard.legal_moves)) == 0 or result[1] == -math.inf or result[1] == math.inf :
             break
         i = i + 1
             
@@ -166,8 +166,8 @@ def makeMove(move: chess.Move, window: MainWindow):
 
 def evaluationFunction(board: chess.Board):
 
-    if chess.Board.is_fifty_moves(board) or chess.Board.is_repetition(board):
-        print("Draw found")
+    if chess.Board.is_fifty_moves(board) or chess.Board.is_repetition(board) or chess.Board.is_stalemate(board):
+        # print("Draw found")
         return 0
 
     if len(list(board.legal_moves)) == 0:
@@ -299,7 +299,7 @@ def legalMove(board: chess.Board, move: str):
 
 if __name__ == "__main__":
     app = QApplication([])
-    AIstart = False
+    AIstart = True
     # if sys.argv[1] == "white":
         # AIstart = True
     window = MainWindow(AIStart=AIstart)
