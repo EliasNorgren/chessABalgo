@@ -10,6 +10,7 @@ import time
 import chess.engine
 import chess.polyglot
 
+
 class MainWindow(QWidget):
     def __init__(self, AIStart):
         super().__init__()
@@ -56,13 +57,12 @@ def AIMove(chessboard: chess.Board, window: MainWindow):
     with chess.polyglot.open_reader("performance.bin") as reader:
         for entry in reader.find_all(window.chessboard):
             print(entry.move, entry.weight, entry.learn)
-            if entry.weight > max_weight :
+            if entry.weight > max_weight:
                 max_weight = entry.weight
                 move = entry.move
-    if max_weight > -math.inf :
+    if max_weight > -math.inf:
         makeMove(chess.Move.from_uci(str(move)), window)
         return
-
 
     print("Thinking")
 
@@ -71,20 +71,20 @@ def AIMove(chessboard: chess.Board, window: MainWindow):
     transPositionTable = dict()
     i = 2
     while True:
-        result = minMax(chessboard, depth=i, prevMove=None, alpha=-1000, beta=1000, transPositionTable = transPositionTable)
+        result = minMax(chessboard, depth=i, prevMove=None, alpha=-
+                        1000, beta=1000, transPositionTable=transPositionTable)
         if (result[0] == None):
                 print("AI did not find move ", chessboard.move_stack)
                 return
         end = time.perf_counter()
         ms = (end-start)
-        print(i, int(ms),result[1], result[2])
-        if ms >= 2 or len(list(chessboard.legal_moves)) == 0 or result[1] == -math.inf or result[1] == math.inf :
+        print(i, int(ms), result[1], result[2])
+        if ms >= 2 or len(list(chessboard.legal_moves)) == 0 or result[1] == -math.inf or result[1] == math.inf:
             break
         i = i + 1
-            
-            
+
     makeMove(chess.Move.from_uci(str(result[0])), window)
-    
+
     print("AB end prediciton:", result[1], "at depth", result[2])
     print("AI move", result[0])
     print("Current value:", evaluationFunction(chessboard))
@@ -106,14 +106,14 @@ def humanMove(self, event):
                       self.boardSize - (self.boardSize*0.075)/2)
 
     move = legalMove(window.chessboard, self.chessMove)
-    if  move == None:
+    if move == None:
         print("Invalid move", self.chessMove)
         self.chessMove = ""
         return False
 
     # Human move
     print("Human move :", self.chessMove)
-    
+
     makeMove(move, window)
     self.chessMove = ""
     return True
@@ -166,9 +166,14 @@ def makeMove(move: chess.Move, window: MainWindow):
 
 def evaluationFunction(board: chess.Board):
 
-    if chess.Board.is_fifty_moves(board) or chess.Board.is_repetition(board) or chess.Board.is_stalemate(board):
-        # print("Draw found")
-        return 0
+    if chess.Board.is_fifty_moves(board) or chess.Board.is_repetition(board) or chess.Board.is_stalemate(board) or chess.Board.is_fivefold_repetition(board):
+        print("Draw found")
+        if chess.Board.is_stalemate(board):
+            print("Stalemate found")
+        if board.turn == chess.BLACK:
+            return -99
+        elif board.turn == chess.WHITE:
+            return 99
 
     if len(list(board.legal_moves)) == 0:
         if board.turn == chess.BLACK:
@@ -228,7 +233,7 @@ def minMax(board: chess.Board, depth: int, prevMove: chess.Move, alpha: int, bet
 
     # Quiescence continuation
     if depth == 0 and len(attackMoves) != 0:
-        sortedMoves = attackMoves
+        sortedMoves = attackMoves + noAttackMoves
     # Quiescence base case
     elif depth == -1:
         value = (prevMove, evaluationFunction(board=board), -1)
@@ -299,9 +304,9 @@ def legalMove(board: chess.Board, move: str):
 
 if __name__ == "__main__":
     app = QApplication([])
-    AIstart = True
-    # if sys.argv[1] == "white":
-        # AIstart = True
+    AIstart = False
+    if sys.argv[1] == "white":
+        AIstart = True
     window = MainWindow(AIStart=AIstart)
     # window = MainWindow(AIStart=AIstart, depth=1)
 
