@@ -19,8 +19,8 @@ class MainWindow(QWidget):
         self.AIStart = AIStart
         self.widgetSvg = QSvgWidget(parent=self)
         self.widgetSvg.setGeometry(0, 0, self.boardSize, self.boardSize)
-        self.chessboard = chess.Board()
-        # self.chessboard = chess.Board(fen="r3k3/8/8/8/8/8/8/4K3 w - - 0 1")
+        # self.chessboard = chess.Board()
+        self.chessboard = chess.Board(fen="7k/P7/4K3/8/8/8/8/8 w - - 0 1")
 
         self.chessboardSvg = chess.svg.board(self.chessboard).encode("UTF-8")
         self.widgetSvg.load(self.chessboardSvg)
@@ -74,8 +74,10 @@ def AIMove(chessboard: chess.Board, window: MainWindow):
         result = minMax(chessboard, depth=i, prevMove=None, alpha=-
                         1000, beta=1000, transPositionTable=transPositionTable)
         if (result[0] == None):
-                print("AI did not find move ", chessboard.move_stack)
-                return
+            print("AI did not find move ", chessboard.move_stack)
+            makeMove(chess.Move.from_uci(
+                str(list(chessboard.legal_moves)[0])), window)
+            return
         end = time.perf_counter()
         ms = (end-start)
         print(i, int(ms), result[1], result[2])
@@ -167,9 +169,9 @@ def makeMove(move: chess.Move, window: MainWindow):
 def evaluationFunction(board: chess.Board):
 
     if chess.Board.is_fifty_moves(board) or chess.Board.is_repetition(board) or chess.Board.is_stalemate(board) or chess.Board.is_fivefold_repetition(board):
-        print("Draw found")
-        if chess.Board.is_stalemate(board):
-            print("Stalemate found")
+        # print("Draw found")
+        # if chess.Board.is_stalemate(board):
+        # print("Stalemate found")
         if board.turn == chess.BLACK:
             return -99
         elif board.turn == chess.WHITE:
@@ -220,7 +222,7 @@ def sortMoveList(moves: chess.LegalMoveGenerator, board: chess.Board):
     return (attackers, nonAttackers)
 
 
-def minMax(board: chess.Board, depth: int, prevMove: chess.Move, alpha: int, beta: int, transPositionTable : dict):
+def minMax(board: chess.Board, depth: int, prevMove: chess.Move, alpha: int, beta: int, transPositionTable: dict):
     # hashVal = hash(str(board.fen) + str(depth))
     # if hashVal in transPositionTable and depth != 0 and depth != -1:
     #     # print("Looking up")
@@ -229,7 +231,7 @@ def minMax(board: chess.Board, depth: int, prevMove: chess.Move, alpha: int, bet
     attackMoves = result[0]
     noAttackMoves = result[1]
 
-    sortedMoves : chess.Move = []
+    sortedMoves: chess.Move = []
 
     # Quiescence continuation
     if depth == 0 and len(attackMoves) != 0:
@@ -256,11 +258,12 @@ def minMax(board: chess.Board, depth: int, prevMove: chess.Move, alpha: int, bet
         value = -math.inf
         bestMov = prevMove
         maxDepth = -math.inf
-        
+
         for mov in sortedMoves:
-            mov : chess.Move
+            mov: chess.Move
             board.push(mov)
-            ret = minMax(board=board, depth=depth-1, prevMove=mov, alpha=alpha, beta=beta, transPositionTable=transPositionTable)
+            ret = minMax(board=board, depth=depth-1, prevMove=mov,
+                         alpha=alpha, beta=beta, transPositionTable=transPositionTable)
             currentVal = ret[1]
             board.pop()
             if currentVal > value:
@@ -278,9 +281,10 @@ def minMax(board: chess.Board, depth: int, prevMove: chess.Move, alpha: int, bet
         bestMov = prevMove
         maxDepth = -math.inf
         for mov in sortedMoves:
-            mov : chess.Move
+            mov: chess.Move
             board.push(mov)
-            ret = minMax(board=board, depth=depth-1, prevMove=mov, alpha=alpha, beta=beta, transPositionTable=transPositionTable)
+            ret = minMax(board=board, depth=depth-1, prevMove=mov,
+                         alpha=alpha, beta=beta, transPositionTable=transPositionTable)
             currentVal = ret[1]
             board.pop()
             if currentVal < value:
