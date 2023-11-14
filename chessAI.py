@@ -20,7 +20,7 @@ class MainWindow(QWidget):
         self.widgetSvg = QSvgWidget(parent=self)
         self.widgetSvg.setGeometry(0, 0, self.boardSize, self.boardSize)
         self.chessboard = chess.Board()
-        # self.chessboard = chess.Board(fen="7k/P7/4K3/8/8/8/8/8 w - - 0 1")
+        # self.chessboard = chess.Board(fen="1k6/8/8/7R/3K4/8/8/8 w - - 0 1")
 
         self.chessboardSvg = chess.svg.board(self.chessboard).encode("UTF-8")
         self.widgetSvg.load(self.chessboardSvg)
@@ -73,15 +73,17 @@ def AIMove(chessboard: chess.Board, window: MainWindow):
     while True:
         result = minMax(chessboard, depth=i, prevMove=None, alpha=-
                         1000, beta=1000, transPositionTable=transPositionTable)
-        if (result[0] == None and (chess.Board.is_fifty_moves(chessboard) or chess.Board.is_repetition(chessboard) or chess.Board.is_stalemate(chessboard) or chess.Board.is_fivefold_repetition(chessboard))):
+        # if (result[0] == None and (chess.Board.is_fifty_moves(chessboard) or chess.Board.is_repetition(chessboard) or chess.Board.is_stalemate(chessboard) or chess.Board.is_fivefold_repetition(chessboard))):
+        if (result[0] == None) :
             print("AI did not find any non-losing move", chessboard.move_stack)
             makeMove(chess.Move.from_uci(
                 str(list(chessboard.legal_moves)[0])), window)
             return
+
         end = time.perf_counter()
         ms = (end-start)
         print(i, int(ms), result[1], result[2])
-        if ms >= 2 or len(list(chessboard.legal_moves)) == 0 or result[1] == -math.inf or result[1] == math.inf:
+        if ms >= 1 or len(list(chessboard.legal_moves)) == 0 or result[1] == -math.inf or result[1] == math.inf:
             break
         i = i + 1
 
