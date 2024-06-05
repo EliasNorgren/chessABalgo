@@ -50,6 +50,35 @@ class MainWindow(QWidget):
                 AIMove(self.chessboard, self)
             self.running = False
 
+def get_best_move(chessboard : chess.Board, depth : int):
+    start = time.perf_counter()
+    result = None
+    transPositionTable = dict()
+    i = 1
+    while True:
+        result = minMax(chessboard, depth=i, prevMove=None, alpha=-
+                        math.inf, beta=math.inf, transPositionTable=transPositionTable)
+        # if (result[0] == None and (chess.Board.is_fifty_moves(chessboard) or chess.Board.is_repetition(chessboard) or chess.Board.is_stalemate(chessboard) or chess.Board.is_fivefold_repetition(chessboard))):
+        if (result[0] == None) :
+            print("AI did not find any non-losing move", chessboard.move_stack)
+            # makeMove(chess.Move.from_uci(
+                # str(list(chessboard.legal_moves)[0])), window)
+            return str(list(chessboard.legal_moves)[0])
+
+        end = time.perf_counter()
+        ms = (end-start)
+        print(i, int(ms), result[1], result[2])
+        if ms >= depth or len(list(chessboard.legal_moves)) == 0 or result[1] == -math.inf or result[1] == math.inf:
+            break
+        i = i + 1
+
+
+    print("AB end prediciton:", result[1], "at depth", result[2])
+    print("AI move", result[0])
+    print("Current value:", evaluationFunction(chessboard))
+    # print("Time taken", int(ms))
+    print("-"*30)
+    return str(result[0])
 
 def AIMove(chessboard: chess.Board, window: MainWindow):
 
@@ -66,26 +95,7 @@ def AIMove(chessboard: chess.Board, window: MainWindow):
 
     print("Thinking")
 
-    start = time.perf_counter()
-    result = None
-    transPositionTable = dict()
-    i = 1
-    while True:
-        result = minMax(chessboard, depth=i, prevMove=None, alpha=-
-                        1000, beta=1000, transPositionTable=transPositionTable)
-        # if (result[0] == None and (chess.Board.is_fifty_moves(chessboard) or chess.Board.is_repetition(chessboard) or chess.Board.is_stalemate(chessboard) or chess.Board.is_fivefold_repetition(chessboard))):
-        if (result[0] == None) :
-            print("AI did not find any non-losing move", chessboard.move_stack)
-            makeMove(chess.Move.from_uci(
-                str(list(chessboard.legal_moves)[0])), window)
-            return
-
-        end = time.perf_counter()
-        ms = (end-start)
-        print(i, int(ms), result[1], result[2])
-        if ms >= 1 or len(list(chessboard.legal_moves)) == 0 or result[1] == -math.inf or result[1] == math.inf:
-            break
-        i = i + 1
+    result = get_best_move(chessboard)
 
     makeMove(chess.Move.from_uci(str(result[0])), window)
 
@@ -168,26 +178,26 @@ def makeMove(move: chess.Move, window: MainWindow):
     window.repaint()
 
 
-# def evaluationFunction2(board: chess.Board):
+def evaluationFunction2(board: chess.Board):
 
-#     if chess.Board.is_fifty_moves(board) or chess.Board.is_repetition(board) or chess.Board.is_stalemate(board) or chess.Board.is_fivefold_repetition(board):
-#         if board.turn == chess.BLACK:
-#             return -99
-#         elif board.turn == chess.WHITE:
-#             return 99
+    # if chess.Board.is_fifty_moves(board) or chess.Board.is_repetition(board) or chess.Board.is_stalemate(board) or chess.Board.is_fivefold_repetition(board):
+    #     if board.turn == chess.BLACK:
+    #         return -99
+    #     elif board.turn == chess.WHITE:
+    #         return 99
 
-#     if len(list(board.legal_moves)) == 0:
-#         if board.turn == chess.BLACK:
-#             return -math.inf
-#         elif board.turn == chess.WHITE:
-#             return math.inf
+    # if len(list(board.legal_moves)) == 0:
+    #     if board.turn == chess.BLACK:
+    #         return -math.inf
+    #     elif board.turn == chess.WHITE:
+    #         return math.inf
 
-#     pawnDiff = calcPieceDiff(chess.PAWN, board)
-#     knightDiff = calcPieceDiff(chess.KNIGHT, board) * 3
-#     bishopDiff = calcPieceDiff(chess.BISHOP, board) * 3
-#     rookDiff = calcPieceDiff(chess.ROOK, board) * 5
-#     queenDiff = calcPieceDiff(chess.QUEEN, board) * 9
-#     return pawnDiff + knightDiff + bishopDiff + rookDiff + queenDiff
+    pawnDiff = calcPieceDiff(chess.PAWN, board)
+    knightDiff = calcPieceDiff(chess.KNIGHT, board) * 3
+    bishopDiff = calcPieceDiff(chess.BISHOP, board) * 3
+    rookDiff = calcPieceDiff(chess.ROOK, board) * 5
+    queenDiff = calcPieceDiff(chess.QUEEN, board) * 9
+    return pawnDiff + knightDiff + bishopDiff + rookDiff + queenDiff
 
 
 pawn_tableWHITE = [
@@ -264,6 +274,8 @@ queen_tableBLACK = []
 king_tableBLACK = []
 
 
+
+
 def initPieceSquareTables(whiteTable, blackTable):
     row = 7
     for i in range(8):
@@ -273,6 +285,12 @@ def initPieceSquareTables(whiteTable, blackTable):
         blackTable.append(newRow)
         row -= 1
 
+initPieceSquareTables(pawn_tableWHITE, pawn_tableBLACK)
+initPieceSquareTables(knight_tableWHITE, knight_tableBLACK)
+initPieceSquareTables(bishop_tableWHITE, bishop_tableBLACK)
+initPieceSquareTables(rook_tableWHITE, rook_tableBLACK)
+initPieceSquareTables(queen_tableWHITE, queen_tableBLACK)
+initPieceSquareTables(king_tableWHITE, king_tableBLACK)
 
 def printPieceSqTable(table):
     print(20*"-")
@@ -285,17 +303,17 @@ def printPieceSqTable(table):
 
 def evaluationFunction(board: chess.Board):
 
-    if chess.Board.is_fifty_moves(board) or chess.Board.is_repetition(board) or chess.Board.is_stalemate(board) or chess.Board.is_fivefold_repetition(board):
+    if chess.Board.is_fifty_moves(board) or chess.Board.is_repetition(board) or chess.Board.is_stalemate(board) or chess.Board.is_fivefold_repetition(board) :
         if board.turn == chess.BLACK:
-            return -math.inf
-        elif board.turn == chess.WHITE:
             return math.inf
+        elif board.turn == chess.WHITE:
+            return -math.inf
 
     if len(list(board.legal_moves)) == 0:
         if board.turn == chess.BLACK:
-            return -math.inf
-        elif board.turn == chess.WHITE:
             return math.inf
+        elif board.turn == chess.WHITE:
+            return -math.inf
 
     whiteSum = 0
     blackSum = 0
@@ -353,8 +371,10 @@ def evaluationFunction(board: chess.Board):
                     blackSum += 20000
                     blackSum += king_tableBLACK[7-row][col]
     # print(f"whiteSum = {whiteSum} blackSum = {blackSum}")
-    return blackSum - whiteSum
+    return whiteSum - blackSum
 
+    # return blackSum - whiteSum + evaluationFunction2(board)
+# 1n1r4/3k1B2/6p1/3P3p/5b2/2N4P/rPP2P1P/R2Q1K1R w KQkq - 0 1
 
 def calcPieceDiff(piece: chess.PieceType, board: chess.Board) -> int:
     return len(chess.Board.pieces(board, piece, chess.BLACK)) - len(chess.Board.pieces(board, piece, chess.WHITE))
@@ -395,15 +415,15 @@ def minMax(board: chess.Board, depth: int, prevMove: chess.Move, alpha: int, bet
 
     sortedMoves: chess.Move = []
 
-    # Quiescence continuation
-    if depth == 0 and len(attackMoves) != 0:
-        sortedMoves = attackMoves + noAttackMoves
-    # Quiescence base case
-    elif depth == -1:
-        value = (prevMove, evaluationFunction(board=board), -1)
-        return value
+    # # Quiescence continuation
+    # if depth == 0 and len(attackMoves) != 0:
+    #     sortedMoves = attackMoves + noAttackMoves
+    # # Quiescence base case
+    # elif depth == -1:
+    #     value = (prevMove, evaluationFunction(board=board), -1)
+    #     return value
     # Regular base case
-    elif depth == 0 or len(attackMoves) + len(noAttackMoves) == 0 or chess.Board.is_fifty_moves(board) or chess.Board.is_repetition(board):
+    if depth == 0 or len(attackMoves) + len(noAttackMoves) == 0 or chess.Board.is_fifty_moves(board) or chess.Board.is_repetition(board):
         value = (prevMove, evaluationFunction(board=board), depth)
         return value
 
@@ -416,7 +436,7 @@ def minMax(board: chess.Board, depth: int, prevMove: chess.Move, alpha: int, bet
         exit()
 
     # MAX
-    if board.turn == chess.BLACK:
+    if board.turn == chess.WHITE:
         value = -math.inf
         bestMov = prevMove
         maxDepth = -math.inf
@@ -438,7 +458,7 @@ def minMax(board: chess.Board, depth: int, prevMove: chess.Move, alpha: int, bet
         transPositionTable[hash(str(board.fen) + str(depth))] = ret
         return (bestMov, value, maxDepth)
     # MIN
-    elif board.turn == chess.WHITE:
+    elif board.turn == chess.BLACK:
         value = math.inf
         bestMov = prevMove
         maxDepth = -math.inf
@@ -468,28 +488,28 @@ def legalMove(board: chess.Board, move: str):
     return None
 
 
+printPieceSqTable(pawn_tableWHITE)
+printPieceSqTable(pawn_tableBLACK)
+
+
 if __name__ == "__main__":
-    initPieceSquareTables(pawn_tableWHITE, pawn_tableBLACK)
-    initPieceSquareTables(knight_tableWHITE, knight_tableBLACK)
-    initPieceSquareTables(bishop_tableWHITE, bishop_tableBLACK)
-    initPieceSquareTables(rook_tableWHITE, rook_tableBLACK)
-    initPieceSquareTables(queen_tableWHITE, queen_tableBLACK)
-    initPieceSquareTables(king_tableWHITE, king_tableBLACK)
+
+    get_best_move(chess.Board(fen="1n1r4/3k1B2/6p1/3P3p/5b2/2N4P/rPP2P1P/R2Q1K1R w KQkq - 0 1"), 0)
 
     printPieceSqTable(pawn_tableWHITE)
     printPieceSqTable(pawn_tableBLACK)
 
-    app = QApplication([])
-    AIstart = False
-    if sys.argv[1] == "white":
-        AIstart = True
-    window = MainWindow(AIStart=AIstart)
-    # window = MainWindow(AIStart=AIstart, depth=1)
+    # app = QApplication([])
+    # AIstart = False
+    # if sys.argv[1] == "white":
+    #     AIstart = True
+    # window = MainWindow(AIStart=AIstart)
+    # # window = MainWindow(AIStart=AIstart, depth=1)
 
-    # window.AIsTurn= sys.argv[1]
-    window.show()
-    app.exec()
+    # # window.AIsTurn= sys.argv[1]
+    # window.show()
+    # app.exec()
 
-    # # chessboard = chess.Board(fen="1P6/3P4/8/3n4/8/8/3p4/8 w - - 0 1")
+    # # # chessboard = chess.Board(fen="1P6/3P4/8/3n4/8/8/3p4/8 w - - 0 1")
     # chessboard = chess.Board()
     # print(evaluationFunction(chessboard))
