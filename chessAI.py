@@ -9,7 +9,7 @@ import sys
 import time
 import chess.engine
 import chess.polyglot
-from line_profiler import LineProfiler
+from line_profiler import profile
 
 class MainWindow(QWidget):
     def __init__(self, AIStart):
