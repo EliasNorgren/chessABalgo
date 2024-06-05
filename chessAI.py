@@ -9,7 +9,7 @@ import sys
 import time
 import chess.engine
 import chess.polyglot
-
+from line_profiler import LineProfiler
 
 class MainWindow(QWidget):
     def __init__(self, AIStart):
@@ -55,6 +55,7 @@ def get_best_move(chessboard : chess.Board, depth : int):
     result = None
     transPositionTable = dict()
     i = 1
+
     while True:
         result = minMax(chessboard, depth=i, prevMove=None, alpha=-
                         math.inf, beta=math.inf, transPositionTable=transPositionTable)
@@ -300,7 +301,7 @@ def printPieceSqTable(table):
         print()
     print(20*"-")
 
-
+@profile
 def evaluationFunction(board: chess.Board):
 
     if chess.Board.is_fifty_moves(board) or chess.Board.is_repetition(board) or chess.Board.is_stalemate(board) or chess.Board.is_fivefold_repetition(board) :
@@ -309,7 +310,7 @@ def evaluationFunction(board: chess.Board):
         elif board.turn == chess.WHITE:
             return -math.inf
 
-    if len(list(board.legal_moves)) == 0:
+    if board.legal_moves.count() == 0:
         if board.turn == chess.BLACK:
             return math.inf
         elif board.turn == chess.WHITE:
@@ -381,32 +382,21 @@ def calcPieceDiff(piece: chess.PieceType, board: chess.Board) -> int:
 
 # Could add checks
 
-
+@profile
 def sortMoveList(moves: chess.LegalMoveGenerator, board: chess.Board):
     attackers = []
-    attackers_value = []
     nonAttackers = []
+
     for move in moves:
-        valBefore = evaluationFunction(board=board)
-        board.push(move)
-        valafter = evaluationFunction(board=board)
-        board.pop()
-        if valBefore != valafter:
-            # if len(attackers) > 1 :
-            # diff = abs(valBefore - valafter)
-            # for i in range(0, len(attackers)):
-            #     if diff > attackers_value[i]:
-            #         attackers_value.insert(i, diff)
-            #         attackers.insert(i, move)
-            #         break
+        # Determine if the move is an attacking move
+        if board.is_capture(move) or board.is_into_check(move):
             attackers.append(move)
-            # attackers_value.append(diff)
         else:
             nonAttackers.append(move)
+    
+    return attackers, nonAttackers
 
-    return (attackers, nonAttackers)
-
-
+@profile
 def minMax(board: chess.Board, depth: int, prevMove: chess.Move, alpha: int, beta: int, transPositionTable: dict):
 
     result = sortMoveList(board.legal_moves, board)
@@ -494,10 +484,8 @@ printPieceSqTable(pawn_tableBLACK)
 
 if __name__ == "__main__":
 
-    get_best_move(chess.Board(fen="1n1r4/3k1B2/6p1/3P3p/5b2/2N4P/rPP2P1P/R2Q1K1R w KQkq - 0 1"), 0)
+    get_best_move(chess.Board(fen="1n2k2r/1p2bppp/2pp3n/4p3/4P3/3B1N2/P1PPQPPP/1qB1R1K1 w k - 0 15"), 4)
 
-    printPieceSqTable(pawn_tableWHITE)
-    printPieceSqTable(pawn_tableBLACK)
 
     # app = QApplication([])
     # AIstart = False
