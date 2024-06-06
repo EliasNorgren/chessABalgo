@@ -304,78 +304,74 @@ def printPieceSqTable(table):
 @profile
 def evaluationFunction(board: chess.Board):
 
-    if chess.Board.is_fifty_moves(board) or chess.Board.is_repetition(board) or chess.Board.is_stalemate(board) or chess.Board.is_fivefold_repetition(board) :
+
+    # Can be changed to board.is_checkmate() for efficienfy
+    if board.is_checkmate() :
+    # if board.legal_moves.count() == 0:
         if board.turn == chess.BLACK:
             return math.inf
         elif board.turn == chess.WHITE:
             return -math.inf
 
-    if board.legal_moves.count() == 0:
-        if board.turn == chess.BLACK:
-            return math.inf
-        elif board.turn == chess.WHITE:
-            return -math.inf
+    if chess.Board.is_stalemate(board) or chess.Board.is_fifty_moves(board) or chess.Board.is_repetition(board) or chess.Board.is_fivefold_repetition(board):
+        return 0
 
     whiteSum = 0
     blackSum = 0
+    piece_map = board.piece_map()
 
-    for row in range(8):
-        for col in range(8):
-            numerical = 8 * row + col
-            piece = board.piece_at(numerical)
-            if piece == None:
-                continue
-            if piece.piece_type == chess.PAWN:
+    for square, piece in piece_map.items():
+        row, col = divmod(square, 8)
+        if piece.piece_type == chess.PAWN:
+            if piece.color == chess.WHITE:
+                whiteSum += 100
+                whiteSum += pawn_tableWHITE[7 - row][col]
+            else:
+                blackSum += 100
+                blackSum += pawn_tableBLACK[7 - row][col]
 
-                if piece.color == chess.WHITE:
+        elif piece.piece_type == chess.KNIGHT:
+            if piece.color == chess.WHITE:
+                whiteSum += 320
+                whiteSum += knight_tableWHITE[7 - row][col]
+            else:
+                blackSum += 320
+                blackSum += knight_tableBLACK[7 - row][col]
 
-                    whiteSum += 100
-                    whiteSum += pawn_tableWHITE[7-row][col]
+        elif piece.piece_type == chess.BISHOP:
+            if piece.color == chess.WHITE:
+                whiteSum += 330
+                whiteSum += bishop_tableWHITE[7 - row][col]
+            else:
+                blackSum += 330
+                blackSum += bishop_tableBLACK[7 - row][col]
 
-                else:
-                    blackSum += 100
-                    blackSum += pawn_tableBLACK[7-row][col]
+        elif piece.piece_type == chess.ROOK:
+            if piece.color == chess.WHITE:
+                whiteSum += 500
+                whiteSum += rook_tableWHITE[7 - row][col]
+            else:
+                blackSum += 500
+                blackSum += rook_tableBLACK[7 - row][col]
 
-            elif piece.piece_type == chess.KNIGHT:
-                if piece.color == chess.WHITE:
-                    whiteSum += 320
-                    whiteSum += knight_tableWHITE[7-row][col]
-                else:
-                    blackSum += 320
-                    blackSum += knight_tableBLACK[7-row][col]
-            elif piece.piece_type == chess.BISHOP:
-                if piece.color == chess.WHITE:
-                    whiteSum += 330
-                    whiteSum += bishop_tableWHITE[7-row][col]
-                else:
-                    blackSum += 330
-                    blackSum += bishop_tableBLACK[7-row][col]
-            elif piece.piece_type == chess.ROOK:
-                if piece.color == chess.WHITE:
-                    whiteSum += 500
-                    whiteSum += rook_tableWHITE[7-row][col]
-                else:
-                    blackSum += 500
-                    blackSum += rook_tableBLACK[7-row][col]
-            elif piece.piece_type == chess.QUEEN:
-                if piece.color == chess.WHITE:
-                    whiteSum += 900
-                    whiteSum += queen_tableWHITE[7-row][col]
-                else:
-                    blackSum += 900
-                    blackSum += queen_tableBLACK[7-row][col]
-            elif piece.piece_type == chess.KING:
-                if piece.color == chess.WHITE:
-                    whiteSum += 20000
-                    whiteSum += king_tableWHITE[7-row][col]
-                else:
-                    blackSum += 20000
-                    blackSum += king_tableBLACK[7-row][col]
-    # print(f"whiteSum = {whiteSum} blackSum = {blackSum}")
+        elif piece.piece_type == chess.QUEEN:
+            if piece.color == chess.WHITE:
+                whiteSum += 900
+                whiteSum += queen_tableWHITE[7 - row][col]
+            else:
+                blackSum += 900
+                blackSum += queen_tableBLACK[7 - row][col]
+
+        elif piece.piece_type == chess.KING:
+            if piece.color == chess.WHITE:
+                whiteSum += 20000
+                whiteSum += king_tableWHITE[7 - row][col]
+            else:
+                blackSum += 20000
+                blackSum += king_tableBLACK[7 - row][col]
+
     return whiteSum - blackSum
 
-    # return blackSum - whiteSum + evaluationFunction2(board)
-# 1n1r4/3k1B2/6p1/3P3p/5b2/2N4P/rPP2P1P/R2Q1K1R w KQkq - 0 1
 
 def calcPieceDiff(piece: chess.PieceType, board: chess.Board) -> int:
     return len(chess.Board.pieces(board, piece, chess.BLACK)) - len(chess.Board.pieces(board, piece, chess.WHITE))
@@ -484,7 +480,7 @@ printPieceSqTable(pawn_tableBLACK)
 
 if __name__ == "__main__":
 
-    get_best_move(chess.Board(fen="1n2k2r/1p2bppp/2pp3n/4p3/4P3/3B1N2/P1PPQPPP/1qB1R1K1 w k - 0 15"), 4)
+    get_best_move(chess.Board(fen="8/8/8/8/6Q1/8/2P5/1K5k w KQkq - 0 1"), 1)
 
 
     # app = QApplication([])
