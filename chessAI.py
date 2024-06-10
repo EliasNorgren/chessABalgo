@@ -1,4 +1,5 @@
-import multiprocessing.process
+
+import multiprocessing.connection
 import chess
 import chess.svg
 import random
@@ -11,7 +12,7 @@ import time
 import chess.engine
 import chess.polyglot
 from concurrent.futures import ProcessPoolExecutor
-from multiprocessing import Manager
+from typing import List
 import traceback
 import cProfile
 import pstats
@@ -192,43 +193,54 @@ class ChessAI():
         k, m = divmod(len(lst), n)
         return [lst[i * k + min(i, m):(i + 1) * k + min(i + 1, m)] for i in range(n)]
 
-    def process_chunk(self, chunk, chessboard_fen, depth : int, result_queue : multiprocessing.Queue):
+    def process_chunk(self, chunk, chessboard_fen, depth : int, pipe : multiprocessing.connection.Connection):
         """Processes a chunk of items and puts results into the shared dictionary."""
+        start = time.perf_counter()
         chessboard = chess.Board(fen=chessboard_fen)
         turn = chessboard.turn
         transPositionTable = dict()
         result = self.minMax(chessboard, depth=depth, prevMove=None, alpha=-math.inf, beta=math.inf, transPositionTable=transPositionTable, chunk=chunk)
 
-        result_queue.put(result)
+        # result_queue.put(result)
+        pipe.send(result)
+        pipe.close()
+        end = time.perf_counter()
+        print(f"Time for pid {os.getpid()}: {end - start}")
         return 0
 
     def get_best_move(self, chessboard : chess.Board, depth : int):
         start = time.perf_counter()
         turn = chessboard.turn
         # transPositionTable = dict()
-        i = 4
-        N = 4
+        i = 2
+        N = 2
         print("Depth - time (s) - score - move")
         move_chunks = self.chunkify(chessboard.legal_moves, N)
-
+        results = []
         while True:
-            result_queue = multiprocessing.Queue()
+            
             processes = [] 
             for p_index in range(N):
-                process = multiprocessing.Process(target=self.process_chunk, args=(move_chunks[p_index], chessboard.fen(), i, result_queue))
-                processes.append(process)
+                conn1, conn2 = multiprocessing.Pipe()
+                process = multiprocessing.Process(target=self.process_chunk, args=(move_chunks[p_index], chessboard.fen(), i, conn2))
+                processes.append((process, conn1))
                 process.start()
 
             start_time = time.time()
-            for process in processes :             
+            for process, pipe in processes :             
                 process.join()
+                res = pipe.recv()
+                pipe.close()
+                results.append(res)
+                print(res)
+
 
             end_time = time.time()
             time_diff = end_time - start_time
-            print(time_diff)
-            results = []
-            for _ in range(result_queue.qsize()) :
-                results.append(result_queue.get())    
+            print(f"Time to join {N} processes {time_diff}")
+            # results = []
+            # while not result_queue.empty() :
+            #     results.append(result_queue.get())    
 
             # # Create a manager for shared data
             # results = []
@@ -520,15 +532,16 @@ if __name__ == "__main__":
 
     
     ai = ChessAI()
-    cProfile.run('ai.get_best_move(chess.Board(fen=sys.argv[1]), int(sys.argv[2]))', filename='profile_results.prof')
+    # cProfile.run('ai.get_best_move(chess.Board(fen=sys.argv[1]), int(sys.argv[2]))', filename='profile_results.prof')
+    ai.get_best_move(chess.Board(fen=sys.argv[1]), int(sys.argv[2]))
     # Load the profiling results
-    stats = pstats.Stats('profile_results.prof')
+    # stats = pstats.Stats('profile_results.prof')
 
     # Sort the results by a specific metric, e.g., cumulative time
-    stats.sort_stats('cumtime')
+    # stats.sort_stats('cumtime')
 
     # Print the top 10 functions by cumulative time
-    stats.print_stats(10)
+    # stats.print_stats(10)
 
     # app = QApplication([])
     # AIstart = False
