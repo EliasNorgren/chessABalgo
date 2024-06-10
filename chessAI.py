@@ -212,8 +212,8 @@ class ChessAI():
         start = time.perf_counter()
         turn = chessboard.turn
         # transPositionTable = dict()
-        i = 2
-        N = 4
+        i = 3
+        N = 5
         print("Depth - time (s) - score - move")
         move_chunks = self.chunkify(chessboard.legal_moves, N)
         results = []
