@@ -197,28 +197,16 @@ class ChessAI():
         chessboard = chess.Board(fen=chessboard_fen)
         turn = chessboard.turn
         transPositionTable = dict()
-        value = None
-        if turn == chess.WHITE :
-            value = -math.inf
-        else :
-            value = math.inf
-        bestMove = None
-        for move in chunk :
-            chessboard.push(move)
-            result = self.minMax(chessboard, depth=depth, prevMove=None, alpha=-math.inf, beta=math.inf, transPositionTable=transPositionTable)
-            if turn == chess.WHITE and result[1] > value:
-                bestMove = (move, result[1])
-            elif turn == chess.BLACK and result[1] < value :
-                bestMove = (move, result[1])
-            chessboard.pop()
-        result_queue.put(bestMove)
+        result = self.minMax(chessboard, depth=depth, prevMove=None, alpha=-math.inf, beta=math.inf, transPositionTable=transPositionTable, chunk=chunk)
+
+        result_queue.put(result)
         return 0
 
     def get_best_move(self, chessboard : chess.Board, depth : int):
         start = time.perf_counter()
         turn = chessboard.turn
         # transPositionTable = dict()
-        i = 3
+        i = 4
         N = 4
         print("Depth - time (s) - score - move")
         move_chunks = self.chunkify(chessboard.legal_moves, N)
@@ -230,9 +218,14 @@ class ChessAI():
                 process = multiprocessing.Process(target=self.process_chunk, args=(move_chunks[p_index], chessboard.fen(), i, result_queue))
                 processes.append(process)
                 process.start()
-            for process in processes :
+
+            start_time = time.time()
+            for process in processes :             
                 process.join()
-            
+
+            end_time = time.time()
+            time_diff = end_time - start_time
+            print(time_diff)
             results = []
             for _ in range(result_queue.qsize()) :
                 results.append(result_queue.get())    
@@ -438,9 +431,11 @@ class ChessAI():
         
         return attackers, nonAttackers
 
-    def minMax(self, board: chess.Board, depth: int, prevMove: chess.Move, alpha: int, beta: int, transPositionTable: dict):
-
-        result = self.sortMoveList(board.legal_moves, board)
+    def minMax(self, board: chess.Board, depth: int, prevMove: chess.Move, alpha: int, beta: int, transPositionTable: dict, chunk : list[chess.Move]):
+        if prevMove == None :
+            result = self.sortMoveList(chunk, board)
+        else :
+            result = self.sortMoveList(board.legal_moves, board)
         attackMoves = result[0]
         noAttackMoves = result[1]
 
@@ -474,9 +469,10 @@ class ChessAI():
 
             for mov in sortedMoves:
                 mov: chess.Move
+                
                 board.push(mov)
                 ret = self.minMax(board=board, depth=depth-1, prevMove=mov,
-                            alpha=alpha, beta=beta, transPositionTable=transPositionTable)
+                            alpha=alpha, beta=beta, transPositionTable=transPositionTable, chunk=chunk)
                 currentVal = ret[1]
                 board.pop()
                 if currentVal > value:
@@ -497,7 +493,7 @@ class ChessAI():
                 mov: chess.Move
                 board.push(mov)
                 ret = self.minMax(board=board, depth=depth-1, prevMove=mov,
-                            alpha=alpha, beta=beta, transPositionTable=transPositionTable)
+                            alpha=alpha, beta=beta, transPositionTable=transPositionTable, chunk=chunk)
                 currentVal = ret[1]
                 board.pop()
                 if currentVal < value:
@@ -529,7 +525,7 @@ if __name__ == "__main__":
     stats = pstats.Stats('profile_results.prof')
 
     # Sort the results by a specific metric, e.g., cumulative time
-    stats.sort_stats('time')
+    stats.sort_stats('cumtime')
 
     # Print the top 10 functions by cumulative time
     stats.print_stats(10)
