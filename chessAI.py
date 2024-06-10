@@ -1,11 +1,10 @@
 
 import multiprocessing.connection
 import chess
-import chess.svg
 import random
 import math
-from PyQt5.QtSvg import QSvgWidget
-from PyQt5.QtWidgets import QApplication, QWidget, QPushButton
+# from PyQt5.QtSvg import QSvgWidget
+# from PyQt5.QtWidgets import QApplication, QWidget, QPushButton
 import os
 import sys
 import time
@@ -17,6 +16,7 @@ import traceback
 import cProfile
 import pstats
 import multiprocessing
+from unittest.mock import MagicMock
 
 # class MainWindow(QWidget):
 #     def __init__(self, AIStart):
@@ -213,7 +213,7 @@ class ChessAI():
         turn = chessboard.turn
         # transPositionTable = dict()
         i = 2
-        N = 2
+        N = 4
         print("Depth - time (s) - score - move")
         move_chunks = self.chunkify(chessboard.legal_moves, N)
         results = []
@@ -530,10 +530,14 @@ class ChessAI():
 
 if __name__ == "__main__":
 
+    if len(sys.argv[1]) == 0:
+        fen = chess.Board().fen()
+    else :
+        fen = sys.argv[1]
     
     ai = ChessAI()
     # cProfile.run('ai.get_best_move(chess.Board(fen=sys.argv[1]), int(sys.argv[2]))', filename='profile_results.prof')
-    ai.get_best_move(chess.Board(fen=sys.argv[1]), int(sys.argv[2]))
+    ai.get_best_move(chess.Board(fen=fen), int(sys.argv[2]))
     # Load the profiling results
     # stats = pstats.Stats('profile_results.prof')
 
