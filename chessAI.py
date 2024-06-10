@@ -10,6 +10,8 @@ import time
 import chess.engine
 import chess.polyglot
 from line_profiler import profile
+from concurrent.futures import ProcessPoolExecutor
+from multiprocessing import Manager
 
 class MainWindow(QWidget):
     def __init__(self, AIStart):
@@ -50,17 +52,71 @@ class MainWindow(QWidget):
                 AIMove(self.chessboard, self)
             self.running = False
 
+def chunkify(lst : chess.LegalMoveGenerator, n):
+    print(lst.count())
+    lst = list(lst)  # Convert LegalMoveGenerator to list
+    k, m = divmod(len(lst), n)
+    return [lst[i * k + min(i, m):(i + 1) * k + min(i + 1, m)] for i in range(n)]
+
+def process_chunk(chunk, transPositionTable, chessboard_fen, depth : int):
+    """Processes a chunk of items and puts results into the shared dictionary."""
+    chessboard = chess.Board(fen=chessboard_fen)
+    turn = chessboard.turn
+    value = None
+    if turn == chess.WHITE :
+        value = -math.inf
+    else :
+        value = math.inf
+    bestMove = None
+    for move in chunk :
+        chessboard.push(move)
+        result = minMax(chessboard, depth=depth, prevMove=None, alpha=-math.inf, beta=math.inf, transPositionTable=transPositionTable)
+        if turn == chess.WHITE and result[1] > value:
+            bestMove = (move, result[1])
+        elif turn == chess.BLACK and result[1] < value :
+            bestMove = (move, result[1])
+        chessboard.pop()
+    return bestMove
+
 def get_best_move(chessboard : chess.Board, depth : int):
     start = time.perf_counter()
-    result = None
-    transPositionTable = dict()
+    turn = chessboard.turn
+    # transPositionTable = dict()
     i = 1
+    N = 4
+    print("Depth - time (s) - score - move")
+    move_chunks = chunkify(chessboard.legal_moves, N)
 
     while True:
-        result = minMax(chessboard, depth=i, prevMove=None, alpha=-
-                        math.inf, beta=math.inf, transPositionTable=transPositionTable)
+        
+        # Create a manager for shared data
+        results = []
+        with Manager() as manager:
+            transPositionTable = manager.dict()
+
+            with ProcessPoolExecutor(max_workers=N) as executor:
+                # Submit each chunk to the process pool with the shared dictionary
+                futures = [executor.submit(process_chunk, chunk, transPositionTable, chessboard.fen(), i) for chunk in move_chunks]
+                
+                # Ensure all processes complete
+                for future in futures:
+                    try:
+                        
+                        results.append(future.result())
+                    except Exception as e:
+                        print(f"Error processing chunk: {e}")
+
+            
+
+        bestMove = None
+        value = -math.inf if turn == chess.WHITE else math.inf
+        for res in results :
+            if turn == chess.WHITE and res[1] > value :
+                bestMove = res 
+            if turn == chess.BLACK and res[1] < value :
+                bestMove = res
         # if (result[0] == None and (chess.Board.is_fifty_moves(chessboard) or chess.Board.is_repetition(chessboard) or chess.Board.is_stalemate(chessboard) or chess.Board.is_fivefold_repetition(chessboard))):
-        if (result[0] == None) :
+        if (bestMove == None) :
             print("AI did not find any non-losing move", chessboard.move_stack)
             # makeMove(chess.Move.from_uci(
                 # str(list(chessboard.legal_moves)[0])), window)
@@ -68,18 +124,18 @@ def get_best_move(chessboard : chess.Board, depth : int):
 
         end = time.perf_counter()
         ms = (end-start)
-        print(i, int(ms), result[1], result[2])
-        if ms >= depth or len(list(chessboard.legal_moves)) == 0 or result[1] == -math.inf or result[1] == math.inf:
+        print(f"{i:2} {int(ms):8} {bestMove[1]:10}     {str(bestMove[0]):8}")
+        if ms >= depth or len(list(chessboard.legal_moves)) == 0 or bestMove[1] == -math.inf or bestMove[1] == math.inf:
             break
         i = i + 1
 
 
-    print("AB end prediciton:", result[1], "at depth", result[2])
-    print("AI move", result[0])
+    print("AB end prediciton:", bestMove[1])
+    print("AI move", bestMove[0])
     print("Current value:", evaluationFunction(chessboard))
     # print("Time taken", int(ms))
     print("-"*30)
-    return str(result[0])
+    return str(bestMove[0])
 
 def AIMove(chessboard: chess.Board, window: MainWindow):
 
@@ -474,13 +530,10 @@ def legalMove(board: chess.Board, move: str):
     return None
 
 
-printPieceSqTable(pawn_tableWHITE)
-printPieceSqTable(pawn_tableBLACK)
-
 
 if __name__ == "__main__":
 
-    get_best_move(chess.Board(fen="8/8/8/8/6Q1/8/2P5/1K5k w KQkq - 0 1"), 1)
+    get_best_move(chess.Board(fen=sys.argv[1]), int(sys.argv[2]))
 
 
     # app = QApplication([])
