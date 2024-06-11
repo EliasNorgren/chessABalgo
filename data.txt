@@ -1,0 +1,21 @@
+parallell, depth = 3 
+
+N = 1, 0.11 s, 782 rec
+N = 2, 0.076 s, 1012 rec
+N = 3, 0.052 s, 1012 rec
+N = 4, 0.045 s, 1138 rec
+
+parallell, depth = 4 
+
+N = 1, 0.45 s, 1336 rec
+N = 2, 0.47 s, 2662 rec
+N = 3, 0.29 s, 4000
+N = 4, 0.32 s, 5471 rec
+
+
+Sequential
+
+depth = 3, 0.1 s
+depth = 4, 0.42 s
+depth = 5, 4.8 s, 1575 rec
+depth = 6, 115.75, 1328? rec
