@@ -119,7 +119,7 @@ class ChessAI():
         start = time.perf_counter()
         turn = chessboard.turn
         # transPositionTable = dict()
-        i = 5
+        i = 4
         N = 4
         print("Depth - time (s) - score - move")
         move_chunks = self.chunkify(chessboard.legal_moves, N)
@@ -173,7 +173,7 @@ class ChessAI():
         print("AI move", bestMove[0])
         print("Current value:", self.evaluationFunction(chessboard))
         print("-"*30)
-        return results
+        return (str(bestMove[0]), round(ms,2), bestMove[1])
 
 
     def getSquare(self, event, lowest, highest):

@@ -15,6 +15,7 @@ import chess.engine
 import chess_pb2
 import chess_pb2_grpc
 from chessABalgo.chessAI import ChessAI
+import math
 
 
 class ChessEngineServicer(chess_pb2_grpc.ChessEngineServicer):
@@ -36,10 +37,17 @@ class ChessEngineServicer(chess_pb2_grpc.ChessEngineServicer):
         for move in move_stack:
             board.push(chess.Move.from_uci(move))
 
-        # Call your chess engine with the board, move stack, and depth
-        best_move = self.ai.get_best_move(board, depth)
 
-        return chess_pb2.GetBestMoveResponse(best_move=best_move)
+        # Call your chess engine with the board, move stack, and depth
+        res = self.ai.get_best_move(board, depth)
+        eval_value = res[2]
+        # Convert evaluation value to int, handling infinity separately
+        if math.isinf(eval_value):
+            eval_int = float('inf') if eval_value > 0 else float('-inf')
+        else:
+            eval_int = int(eval_value)
+        response = chess_pb2.GetBestMoveResponse(best_move=res[0], time_taken = eval_int, eval = int(res[2]))
+        return response
 
     def get_best_move(self, board, depth):
         # Implement your chess engine here
