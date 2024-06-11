@@ -15,4 +15,6 @@ message GetBestMoveRequest {
 
 message GetBestMoveResponse {
     string best_move = 1;
+    int32 time_taken = 2;
+    int32 eval = 3;
 }

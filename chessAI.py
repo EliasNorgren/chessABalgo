@@ -173,7 +173,7 @@ class ChessAI():
         print("AI move", bestMove[0])
         print("Current value:", self.evaluationFunction(chessboard))
         print("-"*30)
-        return str(bestMove[0])
+        return results
 
 
     def getSquare(self, event, lowest, highest):
