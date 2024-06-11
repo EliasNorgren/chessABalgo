@@ -1,16 +1,34 @@
+import sys
+import os
+
+# Add the parent directory to the Python path
+sys.path.append("/home/elias/chess.com-stockfish/chessABalgo")
+sys.path.append("..")
+
+
+print(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from concurrent import futures
 import grpc
 import chess
 import chess.engine
 import chess_pb2
 import chess_pb2_grpc
+from chessABalgo.chessAI import ChessAI
+
 
 class ChessEngineServicer(chess_pb2_grpc.ChessEngineServicer):
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.ai = ChessAI()
+
     def GetBestMove(self, request, context):
+        print(request)
         fen = request.fen
         move_stack = request.move_stack
         depth = request.depth
-
+        processes = request.processes
         # Create a chess board from the FEN string
         board = chess.Board(fen)
 
@@ -19,7 +37,7 @@ class ChessEngineServicer(chess_pb2_grpc.ChessEngineServicer):
             board.push(chess.Move.from_uci(move))
 
         # Call your chess engine with the board, move stack, and depth
-        best_move = "test"
+        best_move = self.ai.get_best_move(board, depth)
 
         return chess_pb2.GetBestMoveResponse(best_move=best_move)
 

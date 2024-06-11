@@ -10,6 +10,7 @@ message GetBestMoveRequest {
     string fen = 1;
     repeated string move_stack = 2;
     int32 depth = 3;
+    int32 processes = 4;
 }
 
 message GetBestMoveResponse {
