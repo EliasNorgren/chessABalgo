@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package chess;
+
+service ChessEngine {
+    rpc GetBestMove (GetBestMoveRequest) returns (GetBestMoveResponse);
+}
+
+message GetBestMoveRequest {
+    string fen = 1;
+    repeated string move_stack = 2;
+    int32 depth = 3;
+}
+
+message GetBestMoveResponse {
+    string best_move = 1;
+}
