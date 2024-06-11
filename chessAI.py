@@ -1,4 +1,6 @@
 
+import multiprocessing
+from multiprocessing import Lock, Value
 import multiprocessing.connection
 import chess
 import random
@@ -12,11 +14,8 @@ import chess.engine
 import chess.polyglot
 from concurrent.futures import ProcessPoolExecutor
 from typing import List
-import traceback
-import cProfile
-import pstats
-import multiprocessing
 from unittest.mock import MagicMock
+import ctypes
 
 # class MainWindow(QWidget):
 #     def __init__(self, AIStart):
@@ -197,28 +196,25 @@ class ChessAI():
         """Processes a chunk of items and puts results into the shared dictionary."""
         start = time.perf_counter()
         chessboard = chess.Board(fen=chessboard_fen)
-        turn = chessboard.turn
         transPositionTable = dict()
-        result = self.minMax(chessboard, depth=depth, prevMove=None, alpha=-math.inf, beta=math.inf, transPositionTable=transPositionTable, chunk=chunk)
-
-        # result_queue.put(result)
+        result = self.minMax(chessboard, depth=depth, prevMove=None, transPositionTable=transPositionTable, chunk=chunk, alpha=-math.inf, beta=math.inf)
         pipe.send(result)
         pipe.close()
         end = time.perf_counter()
-        print(f"Time for pid {os.getpid()}: {end - start}")
+        print(f"Time for pid {os.getpid()}: {round(end - start,2)}")
         return 0
 
     def get_best_move(self, chessboard : chess.Board, depth : int):
         start = time.perf_counter()
         turn = chessboard.turn
         # transPositionTable = dict()
-        i = 3
-        N = 5
+        i = 5
+        N = 4
         print("Depth - time (s) - score - move")
         move_chunks = self.chunkify(chessboard.legal_moves, N)
         results = []
         while True:
-            
+
             processes = [] 
             for p_index in range(N):
                 conn1, conn2 = multiprocessing.Pipe()
@@ -237,29 +233,7 @@ class ChessAI():
 
             end_time = time.time()
             time_diff = end_time - start_time
-            print(f"Time to join {N} processes {time_diff}")
-            # results = []
-            # while not result_queue.empty() :
-            #     results.append(result_queue.get())    
-
-            # # Create a manager for shared data
-            # results = []
-            # # with Manager() as manager:
-            #     # transPositionTable = manager.dict()
-
-            # with ProcessPoolExecutor(max_workers=N) as executor:
-            #     # Submit each chunk to the process pool with the shared dictionary
-            #     futures = [executor.submit(self.process_chunk, chunk, chessboard.fen(), i) for chunk in move_chunks]
-                
-            #     # Ensure all processes complete
-            #     for future in futures:
-            #         try:
-                        
-            #             results.append(future.result())
-            #         except Exception as e:
-            #             traceback.print_exc()
-            #             exit(1)
-
+            print(f"Time to join {N} processes {round(time_diff,2)}")
 
 
             bestMove = None
@@ -267,13 +241,13 @@ class ChessAI():
             for res in results :
                 if turn == chess.WHITE and res[1] > value :
                     bestMove = res 
+                    value = res[1]
                 if turn == chess.BLACK and res[1] < value :
                     bestMove = res
-            # if (result[0] == None and (chess.Board.is_fifty_moves(chessboard) or chess.Board.is_repetition(chessboard) or chess.Board.is_stalemate(chessboard) or chess.Board.is_fivefold_repetition(chessboard))):
+                    value = res[1]
+
             if (bestMove == None) :
                 print("AI did not find any non-losing move", chessboard.move_stack)
-                # makeMove(chess.Move.from_uci(
-                    # str(list(chessboard.legal_moves)[0])), window)
                 return str(list(chessboard.legal_moves)[0])
 
             end = time.perf_counter()
@@ -287,7 +261,6 @@ class ChessAI():
         print("AB end prediciton:", bestMove[1])
         print("AI move", bestMove[0])
         print("Current value:", self.evaluationFunction(chessboard))
-        # print("Time taken", int(ms))
         print("-"*30)
         return str(bestMove[0])
 
@@ -443,7 +416,7 @@ class ChessAI():
         
         return attackers, nonAttackers
 
-    def minMax(self, board: chess.Board, depth: int, prevMove: chess.Move, alpha: int, beta: int, transPositionTable: dict, chunk : list[chess.Move]):
+    def minMax(self, board: chess.Board, depth: int, prevMove: chess.Move, transPositionTable: dict, chunk : list[chess.Move], alpha : int, beta : int):
         if prevMove == None :
             result = self.sortMoveList(chunk, board)
         else :
@@ -483,14 +456,14 @@ class ChessAI():
                 mov: chess.Move
                 
                 board.push(mov)
-                ret = self.minMax(board=board, depth=depth-1, prevMove=mov,
-                            alpha=alpha, beta=beta, transPositionTable=transPositionTable, chunk=chunk)
+                ret = self.minMax(board=board, depth=depth-1, prevMove=mov, transPositionTable=transPositionTable, chunk=chunk, alpha=alpha, beta=beta)
                 currentVal = ret[1]
                 board.pop()
                 if currentVal > value:
                     value = currentVal
                     bestMov = mov
                     maxDepth = ret[2]
+
                 alpha = max(alpha, value)
                 if value >= beta:
                     break
@@ -504,16 +477,16 @@ class ChessAI():
             for mov in sortedMoves:
                 mov: chess.Move
                 board.push(mov)
-                ret = self.minMax(board=board, depth=depth-1, prevMove=mov,
-                            alpha=alpha, beta=beta, transPositionTable=transPositionTable, chunk=chunk)
+                ret = self.minMax(board=board, depth=depth-1, prevMove=mov, transPositionTable=transPositionTable, chunk=chunk, alpha=alpha, beta=beta)
                 currentVal = ret[1]
                 board.pop()
                 if currentVal < value:
                     value = currentVal
                     bestMov = mov
                     maxDepth = ret[2]
+
                 beta = min(beta, value)
-                if currentVal <= alpha:
+                if value <= alpha:
                     break
             transPositionTable[hash(str(board.fen) + str(depth))] = ret
             return (bestMov, value, maxDepth)
