@@ -15,6 +15,6 @@ message GetBestMoveRequest {
 
 message GetBestMoveResponse {
     string best_move = 1;
-    int32 time_taken = 2;
-    int32 eval = 3;
+    float time_taken = 2;
+    float eval = 3;
 }

@@ -16,7 +16,7 @@ import chess_pb2
 import chess_pb2_grpc
 from chessABalgo.chessAI import ChessAI
 import math
-
+import traceback
 
 class ChessEngineServicer(chess_pb2_grpc.ChessEngineServicer):
 
@@ -25,38 +25,37 @@ class ChessEngineServicer(chess_pb2_grpc.ChessEngineServicer):
         self.ai = ChessAI()
 
     def GetBestMove(self, request, context):
-        print(request)
-        fen = request.fen
-        move_stack = request.move_stack
-        depth = request.depth
-        processes = request.processes
-        # Create a chess board from the FEN string
-        board = chess.Board(fen)
+        try :
+            print(request)
+            fen = request.fen
+            move_stack = request.move_stack
+            depth = request.depth
+            processes = request.processes
+            # Create a chess board from the FEN string
+            board = chess.Board(fen)
 
-        # Apply the move stack to the board
-        for move in move_stack:
-            board.push(chess.Move.from_uci(move))
+            # Apply the move stack to the board
+            for move in move_stack:
+                board.push(chess.Move.from_uci(move))
 
 
-        # Call your chess engine with the board, move stack, and depth
-        res = self.ai.get_best_move(board, depth)
-        eval_value = res[2]
-        # Convert evaluation value to int, handling infinity separately
-        if math.isinf(eval_value):
-            eval_int = float('inf') if eval_value > 0 else float('-inf')
-        else:
-            eval_int = int(eval_value)
-        response = chess_pb2.GetBestMoveResponse(best_move=res[0], time_taken = eval_int, eval = int(res[2]))
+            # Call your chess engine with the board, move stack, and depth
+            res = self.ai.get_best_move(board, depth)
+            eval_value = res[2]
+            # # Convert evaluation value to int, handling infinity separately
+            # if math.isinf(eval_value):
+            #     eval_int = float('inf') if eval_value > 0 else float('-inf')
+            # else:
+            #     eval_int = int(eval_value)
+            response = chess_pb2.GetBestMoveResponse()
+            response.best_move = res[0]
+            response.time_taken = res[1]
+            response.eval = eval_value
+        except Exception :
+            traceback.print_exc()
+            exit(1)
         return response
 
-    def get_best_move(self, board, depth):
-        # Implement your chess engine here
-        # This is a placeholder implementation
-        # Replace it with your actual chess engine logic
-        with chess.engine.SimpleEngine.popen_uci("/path/to/your/uci/engine") as engine:
-            result = engine.play(board, chess.engine.Limit(depth=depth))
-            best_move = result.move.uci()
-        return best_move
 
 def serve():
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
