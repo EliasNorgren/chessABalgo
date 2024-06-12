@@ -112,7 +112,7 @@ class ChessAI():
         pipe.send(result)
         pipe.close()
         end = time.perf_counter()
-        print(f"Time for pid {os.getpid()}: {round(end - start,2)}")
+        # print(f"Time for pid {os.getpid()}: {round(end - start,2)}")
         return 0
 
     def get_best_move(self, chessboard : chess.Board, depth : int):
@@ -139,30 +139,30 @@ class ChessAI():
                 res = pipe.recv()
                 pipe.close()
                 results.append(res)
-                print(res)
 
 
             end_time = time.time()
             time_diff = end_time - start_time
-            print(f"Time to join {N} processes {round(time_diff,2)}")
+            # print(f"Time to join {N} processes {round(time_diff,2)}")
 
 
             bestMove = None
             value = -math.inf if turn == chess.WHITE else math.inf
             for res in results :
-                if turn == chess.WHITE and res[1] > value :
+                if turn == chess.WHITE and res[1] > value and res[0] != None:
                     bestMove = res 
                     value = res[1]
-                if turn == chess.BLACK and res[1] < value :
+                if turn == chess.BLACK and res[1] < value and res[0] != None:
                     bestMove = res
                     value = res[1]
 
-            if (bestMove == None) :
-                print("AI did not find any non-losing move", chessboard.move_stack)
-                return str(list(chessboard.legal_moves)[0])
-
             end = time.perf_counter()
             ms = (end-start)
+
+            if (bestMove == None) :
+                print("AI did not find any non-losing move", chessboard.move_stack)
+                return ("None", round(ms,2), bestMove[1])
+
             print(f"{i:2} {int(ms):8} {bestMove[1]:10}     {str(bestMove[0]):8}")
             if ms >= depth or len(list(chessboard.legal_moves)) == 0 or bestMove[1] == -math.inf or bestMove[1] == math.inf:
                 break
@@ -173,6 +173,8 @@ class ChessAI():
         print("AI move", bestMove[0])
         print("Current value:", self.evaluationFunction(chessboard))
         print("-"*30)
+        if ms == math.inf or ms == -math.inf :
+            ms = 0
         return (str(bestMove[0]), round(ms,2), bestMove[1])
 
 
