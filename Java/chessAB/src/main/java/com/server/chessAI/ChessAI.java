@@ -7,11 +7,36 @@ import java.util.*;
 
 public class ChessAI {
 
+    public AlphaBeta getBestMove(int depth, String fen)
 
-    public AlphaBeta getBestMove(String fen, int depth) {
+    public AlphaBeta getBestMove(int depth, List<String> moveStack) {
+
         Board board = new Board();
-        board.loadFromFen(fen);
-        return alphaBeta(board, depth, null, Integer.MIN_VALUE, Integer.MAX_VALUE);
+        for (String move : moveStack) {
+            board.doMove(move);
+        }
+        CastleRight whiteCastleRight = board.getCastleRight(Side.WHITE);
+        CastleRight blackCastleRight = board.getCastleRight(Side.BLACK);
+        System.out.println("White castle: " + whiteCastleRight);
+        System.out.println("Black castle: " + blackCastleRight + "\n");
+
+        int value = board.getSideToMove() == Side.WHITE ? Integer.MIN_VALUE : Integer.MAX_VALUE;
+        AlphaBeta bestMove = new AlphaBeta(null, value);
+        int startDepth = 1;
+        long startTime = System.currentTimeMillis();
+        do {
+            bestMove = alphaBeta(board, startDepth, null, Integer.MIN_VALUE, Integer.MAX_VALUE);
+
+            System.out.println("Depth: " + startDepth + " Eval: " + bestMove.eval + " Move: " + bestMove.prevMove + " Time: " + ((System.currentTimeMillis() - startTime) / 1000.0));
+            startDepth++;
+        } while (System.currentTimeMillis() - startTime <= (depth * 1000L));
+        if (bestMove.prevMove == null){
+            System.out.println("AI did not find non losing move, picking first");
+            bestMove.prevMove = board.legalMoves().get(0);
+            bestMove.eval = value * -1;
+        }
+        System.out.println("-------------------------------------------------------------");
+        return bestMove;
     }
 
     private static class MoveComparator implements Comparator<Move> {
@@ -35,13 +60,19 @@ public class ChessAI {
     }
 
     private AlphaBeta alphaBeta(Board board, int depth, Move prevMove, int alpha, int beta) {
+//        try {
+            if (depth == 0){
+                return new AlphaBeta(prevMove, evaluate(board));
+            }
+//        }
+//        catch (Exception e){
+//            System.out.println();
+//        }
 
-        List<Move> orderedMoves = board.legalMoves();
+        List<Move> orderedMoves = orderedMoves = board.legalMoves();
         orderedMoves.sort(new MoveComparator(board));
 
-        if (depth == 0 || orderedMoves.size() == 0){
-            return new AlphaBeta(prevMove, evaluate(board));
-        }
+
 
 //        MAX
         if (board.getSideToMove() == Side.WHITE){
@@ -49,7 +80,10 @@ public class ChessAI {
             Move bestMove = prevMove;
 
             for (Move move : orderedMoves ){
-                board.doMove(move);
+                if(!board.doMove(move, true)){
+                    System.out.println("Error");
+                    System.exit(1);
+                }
                 AlphaBeta ret = alphaBeta(board, depth - 1, prevMove, alpha, beta);
                 board.undoMove();
                 int currentVal = ret.eval;
@@ -86,6 +120,7 @@ public class ChessAI {
     }
 
     private int evaluate(Board board) {
+
         if (board.isMated()){
             if (board.getSideToMove() == Side.BLACK){
                 return Integer.MAX_VALUE;
@@ -93,6 +128,7 @@ public class ChessAI {
                 return Integer.MIN_VALUE;
             }
         }
+
         if (board.isDraw()){
             return 0;
         }

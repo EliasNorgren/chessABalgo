@@ -41,4 +41,12 @@ public class GetBestMoveRequest {
     public void setProcesses(int processes) {
         this.processes = processes;
     }
+
+    @Override
+    public String toString() {
+        return "Fen: " + this.getFen() + "\n"
+                + "MoveStack: " + String.join("-", this.moveStack) + "\n"
+                + "Depth: " + this.getDepth() + "\n"
+                + "Processes: " + this.getProcesses() + "\n";
+    }
 }
