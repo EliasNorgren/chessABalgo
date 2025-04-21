@@ -7,7 +7,10 @@ import java.util.*;
 
 public class ChessAI {
 
+    private int maxDepth;
+
     public AlphaBeta getBestMove(int depth, Board board) {
+        this.maxDepth = depth;
         return alphaBeta(board, depth, null, Integer.MIN_VALUE, Integer.MAX_VALUE);
     }
 
@@ -21,23 +24,37 @@ public class ChessAI {
         return this.getBestMove(board, max_time_seconds);
     }
 
-    private BestTurnInformation getBestMove(Board board, int depth) {
+    public BestTurnInformation getBestMove(Board board, int max_time_seconds) {
 
         CastleRight whiteCastleRight = board.getCastleRight(Side.WHITE);
         CastleRight blackCastleRight = board.getCastleRight(Side.BLACK);
         System.out.println("White castle: " + whiteCastleRight);
-        System.out.println("Black castle: " + blackCastleRight + "\n");
+        System.out.println("Black castle: " + blackCastleRight);
 
-        int value = board.getSideToMove() == Side.WHITE ? Integer.MIN_VALUE : Integer.MAX_VALUE;
+        int eval = evaluate(board);
+        System.out.println("Current eval: " + eval + "\n");
+
+        List<Move> moves = board.legalMoves();
+        if (moves.size() == 1 ){
+            System.out.println("Only one move possible: " + moves.get(0).toString() + " eval: " + eval);
+            return new BestTurnInformation(new AlphaBeta(moves.get(0), eval), 0);
+        }
+        Side side = board.getSideToMove();
+        int value = side == Side.WHITE ? Integer.MIN_VALUE : Integer.MAX_VALUE;
         AlphaBeta bestMove = new AlphaBeta(null, value);
         int startDepth = 1;
         long startTime = System.currentTimeMillis();
         do {
+            this.maxDepth = startDepth;
             bestMove = alphaBeta(board, startDepth, null, Integer.MIN_VALUE, Integer.MAX_VALUE);
 
             System.out.println("Depth: " + startDepth + " Eval: " + bestMove.eval + " Move: " + bestMove.prevMove + " Time: " + ((System.currentTimeMillis() - startTime) / 1000.0));
+            if ((side == Side.WHITE && bestMove.eval == Integer.MAX_VALUE)
+                    || side == Side.BLACK && bestMove.eval == Integer.MIN_VALUE) {
+                break;
+            }
             startDepth++;
-        } while (System.currentTimeMillis() - startTime <= (depth * 1000L));
+        } while (System.currentTimeMillis() - startTime <= (max_time_seconds * 1000L));
         if (bestMove.prevMove == null){
             System.out.println("AI did not find non losing move, picking first");
             bestMove.prevMove = board.legalMoves().get(0);
@@ -118,6 +135,9 @@ public class ChessAI {
         int whiteSum = 0;
         int blackSum = 0;
 
+//        whiteSum += calculateCastlePoints(board.getCastleRight(Side.WHITE));
+//        blackSum += calculateCastlePoints(board.getCastleRight(Side.BLACK));
+
         for (Piece p : Piece.values()){
             if (p == Piece.NONE){
                 continue;
@@ -154,6 +174,21 @@ public class ChessAI {
             }
         }
         return whiteSum - blackSum;
+    }
+
+    private int calculateCastlePoints(CastleRight castleRight) {
+        switch (castleRight) {
+            case NONE -> {
+                return -50;
+            }
+            case KING_SIDE, QUEEN_SIDE -> {
+                return -25;
+            }
+            case KING_AND_QUEEN_SIDE -> {
+                return 0;
+            }
+        }
+        return 0;
     }
 
     private int getValueFromTable(Piece p, int row, int col) {
