@@ -7,14 +7,26 @@ import java.util.*;
 
 public class ChessAI {
 
-    public AlphaBeta getBestMove(int depth, String fen)
+    public AlphaBeta getBestMove(int depth, String fen) {
+        Board board = new Board();
+        board.loadFromFen(fen);
+        return alphaBeta(board, depth, null, Integer.MIN_VALUE, Integer.MAX_VALUE);
+    }
 
-    public AlphaBeta getBestMove(int depth, List<String> moveStack) {
-
+    public AlphaBeta getBestMove(int max_time_seconds, List<String> moveStack, boolean debug) {
         Board board = new Board();
         for (String move : moveStack) {
             board.doMove(move);
         }
+        System.out.println("Pushed board into FEN: " + board.getFen());
+        if (!debug){
+            return this.getBestMove(board, max_time_seconds);
+        }
+        return alphaBeta(board, max_time_seconds, null, Integer.MIN_VALUE, Integer.MAX_VALUE);
+    }
+
+    private AlphaBeta getBestMove(Board board, int depth) {
+
         CastleRight whiteCastleRight = board.getCastleRight(Side.WHITE);
         CastleRight blackCastleRight = board.getCastleRight(Side.BLACK);
         System.out.println("White castle: " + whiteCastleRight);
@@ -39,39 +51,14 @@ public class ChessAI {
         return bestMove;
     }
 
-    private static class MoveComparator implements Comparator<Move> {
 
-        private final Board board;
-
-        public MoveComparator(Board board){
-            this.board = board;
-        }
-
-        @Override
-        public int compare(Move o1, Move o2) {
-            if (this.board.isAttackedBy(o1) && !this.board.isAttackedBy(o2)) {
-                return -1; // o1 is a capture, o2 is not
-            } else if (this.board.isAttackedBy(o1) && !this.board.isAttackedBy(o2)) {
-                return 1; // o2 is a capture, o1 is not
-            } else {
-                return 0; // Both are either captures or non-captures
-            }
-        }
-    }
 
     private AlphaBeta alphaBeta(Board board, int depth, Move prevMove, int alpha, int beta) {
-//        try {
-            if (depth == 0){
-                return new AlphaBeta(prevMove, evaluate(board));
-            }
-//        }
-//        catch (Exception e){
-//            System.out.println();
-//        }
+        if (depth == 0 || board.isDraw() || board.isMated()){
+            return new AlphaBeta(prevMove, evaluate(board));
+        }
 
-        List<Move> orderedMoves = orderedMoves = board.legalMoves();
-        orderedMoves.sort(new MoveComparator(board));
-
+        List<Move> orderedMoves = new MoveSorter(board).sort();
 
 
 //        MAX

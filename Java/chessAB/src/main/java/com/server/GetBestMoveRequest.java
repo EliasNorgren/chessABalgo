@@ -45,7 +45,7 @@ public class GetBestMoveRequest {
     @Override
     public String toString() {
         return "Fen: " + this.getFen() + "\n"
-                + "MoveStack: " + String.join("-", this.moveStack) + "\n"
+                + "MoveStack: " + String.join(" ", this.moveStack) + "\n"
                 + "Depth: " + this.getDepth() + "\n"
                 + "Processes: " + this.getProcesses() + "\n";
     }
