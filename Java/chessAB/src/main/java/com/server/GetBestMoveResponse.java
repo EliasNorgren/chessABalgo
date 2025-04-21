@@ -4,6 +4,7 @@ public class GetBestMoveResponse {
     private String bestMove;
     private float timeTaken;
     private float eval;
+    private int depth;
 
     // Getters and setters
 
@@ -29,5 +30,9 @@ public class GetBestMoveResponse {
 
     public void setEval(float eval) {
         this.eval = eval;
+    }
+
+    public void setDepth(int depth) {
+        this.depth = depth;
     }
 }

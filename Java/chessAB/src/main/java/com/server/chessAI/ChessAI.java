@@ -7,25 +7,21 @@ import java.util.*;
 
 public class ChessAI {
 
-    public AlphaBeta getBestMove(int depth, String fen) {
-        Board board = new Board();
-        board.loadFromFen(fen);
+    public AlphaBeta getBestMove(int depth, Board board) {
         return alphaBeta(board, depth, null, Integer.MIN_VALUE, Integer.MAX_VALUE);
     }
 
-    public AlphaBeta getBestMove(int max_time_seconds, List<String> moveStack, boolean debug) {
+    public BestTurnInformation getBestMove(int max_time_seconds, List<String> moveStack) {
         Board board = new Board();
         for (String move : moveStack) {
             board.doMove(move);
         }
         System.out.println("Pushed board into FEN: " + board.getFen());
-        if (!debug){
-            return this.getBestMove(board, max_time_seconds);
-        }
-        return alphaBeta(board, max_time_seconds, null, Integer.MIN_VALUE, Integer.MAX_VALUE);
+
+        return this.getBestMove(board, max_time_seconds);
     }
 
-    private AlphaBeta getBestMove(Board board, int depth) {
+    private BestTurnInformation getBestMove(Board board, int depth) {
 
         CastleRight whiteCastleRight = board.getCastleRight(Side.WHITE);
         CastleRight blackCastleRight = board.getCastleRight(Side.BLACK);
@@ -48,7 +44,7 @@ public class ChessAI {
             bestMove.eval = value * -1;
         }
         System.out.println("-------------------------------------------------------------");
-        return bestMove;
+        return new BestTurnInformation(bestMove, startDepth);
     }
 
 
@@ -59,7 +55,6 @@ public class ChessAI {
         }
 
         List<Move> orderedMoves = new MoveSorter(board).sort();
-
 
 //        MAX
         if (board.getSideToMove() == Side.WHITE){
@@ -106,7 +101,7 @@ public class ChessAI {
         }
     }
 
-    private int evaluate(Board board) {
+    public int evaluate(Board board) {
 
         if (board.isMated()){
             if (board.getSideToMove() == Side.BLACK){
@@ -130,35 +125,34 @@ public class ChessAI {
 
             long bitBoard = board.getBitboard(p);
 
+            if (bitBoard == 0L){
+                continue;
+            }
+
             if (p.getPieceSide() == Side.WHITE){
                 long whitePieces = bitBoard & board.getBitboard(Side.WHITE);
                 int whiteCount = Long.bitCount(whitePieces);
                 whiteSum += ChessTables.PIECE_VALUES[p.ordinal()] * whiteCount;
-//                System.out.println("White count " + p + " " + whiteCount + " " + whiteSum);
-                for (int pos = 0; pos < 64; pos++) {
-                    if ((whitePieces & (1L << pos)) != 0) {
-                        int row = pos / 8;
-                        int col = pos % 8;
-                        whiteSum += getValueFromTable(p, row, col);
-                    }
+                List<Square> squares = board.getPieceLocation(p);
+                for (Square sq : squares) {
+                    int ordinal = sq.ordinal();
+                    int row = 7 - ordinal / 8;
+                    int col = ordinal % 8;
+                    whiteSum += getValueFromTable(p, row, col);
                 }
-
             }else{
                 long blackPieces = bitBoard & board.getBitboard(Side.BLACK);
                 int blackCount = Long.bitCount(blackPieces);
                 blackSum += ChessTables.PIECE_VALUES[p.ordinal()] * blackCount;
-//                System.out.println("Black count " + p + " " + blackCount + " " + blackSum);
-                for (int pos = 0; pos < 64; pos++) {
-                    if ((blackPieces & (1L << pos)) != 0) {
-                        int row = pos / 8;
-                        int col = pos % 8;
-                        blackSum += getValueFromTable(p, row, col);
-                    }
+                List<Square> squares = board.getPieceLocation(p);
+                for (Square sq : squares) {
+                    int ordinal = sq.ordinal();
+                    int row = 7 - ordinal / 8;
+                    int col = ordinal % 8;
+                    blackSum += getValueFromTable(p, row, col);
                 }
             }
         }
-
-//        System.out.println(whiteSum + " " + blackSum);
         return whiteSum - blackSum;
     }
 
