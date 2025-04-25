@@ -32,8 +32,9 @@ public class ChessAI {
         System.out.println("Black castle: " + blackCastleRight);
 
         int eval = evaluate(board);
-        System.out.println("Current eval: " + eval + "\n");
-
+        System.out.println("Current eval: " + eval);
+        long repetitions = getLastPositionHistoryTimes(board.getHistory());
+        System.out.println("This position has been seen " + repetitions + (repetitions == 1 ? " time." : "times.") + "\n");
         List<Move> moves = board.legalMoves();
         if (moves.size() == 1 ){
             System.out.println("Only one move possible: " + moves.get(0).toString() + " eval: " + eval);
@@ -64,6 +65,10 @@ public class ChessAI {
         return new BestTurnInformation(bestMove, startDepth);
     }
 
+    public long getLastPositionHistoryTimes(LinkedList<Long> history) {
+        long lastItem = history.getLast();
+        return history.stream().filter(value -> value.equals(lastItem)).count();
+    }
 
 
     private AlphaBeta alphaBeta(Board board, int depth, Move prevMove, int alpha, int beta) {

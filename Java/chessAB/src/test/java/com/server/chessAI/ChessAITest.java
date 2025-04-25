@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 
 
 import java.util.Arrays;
+import java.util.LinkedList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -81,6 +82,19 @@ class ChessAITest {
         b.loadFromFen("K7/5r2/1k6/8/8/8/8/8 b - - 0 1");
         BestTurnInformation ret = ai.getBestMove(b, 5);
         assertTrue(ret.depth == 1);
+    }
+
+    @Test
+    public void repetitionCounterTest(){
+        ChessAI ai = new ChessAI();
+        LinkedList<Long> list = new LinkedList<>();
+        list.add(10L);
+        list.add(20L);
+        list.add(10L);
+        list.add(30L);
+        list.add(10L);
+        long actual = ai.getLastPositionHistoryTimes(list);
+        assertEquals(3, actual);
     }
 
     private Board generateBoardFromMoves(String moves){

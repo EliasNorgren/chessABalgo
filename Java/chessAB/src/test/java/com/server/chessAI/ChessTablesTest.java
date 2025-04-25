@@ -3,6 +3,7 @@ package com.server.chessAI;
 import com.github.bhlangonijr.chesslib.Board;
 import org.junit.jupiter.api.Test;
 
+import java.security.AlgorithmParameterGenerator;
 import java.util.Arrays;
 import java.util.List;
 
@@ -50,6 +51,28 @@ class ChessTablesTest {
         int goodMove = ai.evaluate(b);
         assertTrue(goodMove > shitMove);
     }
+
+//    depth 6
+    @Test
+    public void castleTest3() {
+        Board b = generateBoardFromMoves("c4 e6 g3 Nc6 Bg2 e5 e4 Nf6 d3 Nd4 Nc3 Bb4 Ne2 Nxe2 Qxe2 d6 O-O");
+
+        ChessAI ai = new ChessAI();
+        String fen = b.getFen();
+
+        b.doMove("e8f8");
+        fen = b.getFen();
+        int shitMove = ai.evaluate(b);
+        b.undoMove();
+
+        b.doMove("e8g8");
+        fen = b.getFen();
+        int goodMove = ai.evaluate(b);
+        b.undoMove();
+
+        assertTrue(goodMove < shitMove);
+    }
+
 
     private Board generateBoardFromMoves(String moves){
         List<String> moveStack = Arrays.stream(moves.split(" ")).toList();
