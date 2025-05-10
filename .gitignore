@@ -1,0 +1,6 @@
+Java/chessAB/.idea/
+Java/chessAB/target/
+__pycache__/
+chessAI.py.lprof
+gRPC/__pycache__/
+profile_results.prof
