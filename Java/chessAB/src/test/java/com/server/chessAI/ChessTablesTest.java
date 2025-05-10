@@ -3,7 +3,6 @@ package com.server.chessAI;
 import com.github.bhlangonijr.chesslib.Board;
 import org.junit.jupiter.api.Test;
 
-import java.security.AlgorithmParameterGenerator;
 import java.util.Arrays;
 import java.util.List;
 
@@ -18,8 +17,8 @@ class ChessTablesTest {
         Board b = generateBoardFromMoves(moveStackString);
 
         AlphaBeta ret = ai.getBestMove(5, b);
-        System.out.println(ret.prevMove + " " + ret.eval);
-        assertTrue(!ret.prevMove.toString().equals("e8f8"));
+        System.out.println(ret.move + " " + ret.eval);
+        assertTrue(!ret.move.toString().equals("e8f8"));
     }
 
     @Test
@@ -73,6 +72,15 @@ class ChessTablesTest {
         assertTrue(goodMove < shitMove);
     }
 
+    @Test
+    public void badEvalTest() {
+        String fen = "rnbqkbnr/5pp1/3pp2p/pB6/3PP3/5N2/PPP2PPP/R1BQK2R b - - 0 3";
+        ChessAI ai = new ChessAI();
+        Board b = new Board();
+        b.loadFromFen(fen);
+        int res = ai.evaluate(b);
+        assertTrue(res <= 0);
+    }
 
     private Board generateBoardFromMoves(String moves){
         List<String> moveStack = Arrays.stream(moves.split(" ")).toList();

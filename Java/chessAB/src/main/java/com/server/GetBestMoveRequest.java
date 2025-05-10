@@ -5,7 +5,7 @@ import java.util.List;
 public class GetBestMoveRequest {
     private String fen;
     private List<String> moveStack;
-    private int depth;
+    private String max_time;
     private int processes;
 
     // Getters and setters
@@ -26,12 +26,12 @@ public class GetBestMoveRequest {
         this.moveStack = moveStack;
     }
 
-    public int getDepth() {
-        return depth;
+    public String getMax_time() {
+        return max_time;
     }
 
-    public void setDepth(int depth) {
-        this.depth = depth;
+    public void setMax_time(String max_time) {
+        this.max_time = max_time;
     }
 
     public int getProcesses() {
@@ -46,7 +46,7 @@ public class GetBestMoveRequest {
     public String toString() {
         return "Fen: " + this.getFen() + "\n"
                 + "MoveStack: " + String.join(" ", this.moveStack) + "\n"
-                + "Depth: " + this.getDepth() + "\n"
+                + "Depth: " + this.getMax_time() + "\n"
                 + "Processes: " + this.getProcesses() + "\n";
     }
 }

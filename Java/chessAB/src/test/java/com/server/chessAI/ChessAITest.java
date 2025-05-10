@@ -10,6 +10,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 class ChessAITest {
+
     @Test
     public void checkMateTest(){
         ChessAI ai = new ChessAI();
@@ -17,22 +18,36 @@ class ChessAITest {
         b.loadFromFen("3k4/6R1/6nR/8/8/8/8/7K w");
 
         AlphaBeta move1 = ai.getBestMove(5, b);
-        assertEquals("h6g6", move1.prevMove.toString());
+        assertEquals("h6g6", move1.move.toString());
         assertEquals(Integer.MAX_VALUE, move1.eval);
-        b.doMove(move1.prevMove);
+        b.doMove(move1.move);
         b.doMove("d8e8");
 
         AlphaBeta move2 = ai.getBestMove(4, b);
-        assertEquals("g6f6", move2.prevMove.toString());
+        assertEquals("g6f6", move2.move.toString());
         assertEquals(Integer.MAX_VALUE, move2.eval);
-        b.doMove(move2.prevMove);
+        b.doMove(move2.move);
         b.doMove("e8d8");
 
         AlphaBeta move3 = ai.getBestMove(1, b);
-        assertEquals("f6f8", move3.prevMove.toString());
+        assertEquals("f6f8", move3.move.toString());
         assertEquals(Integer.MAX_VALUE, move1.eval);
-        b.doMove(move3.prevMove);
+        b.doMove(move3.move);
         assertTrue(b.isMated());
+    }
+
+    @Test
+    public void mateInFiveTest(){
+
+        ChessAI ai = new ChessAI();
+        Board b = new Board();
+        b.loadFromFen("8/8/8/2k5/7R/6R1/8/7K w - - 0 1");
+        String fen = b.getFen();
+
+        AlphaBeta move = ai.getBestMove(9, b);
+        assertEquals("g3g5", move.move.toString());
+        assertEquals(Integer.MAX_VALUE, move.eval);
+
     }
 
     @Test
@@ -41,7 +56,7 @@ class ChessAITest {
         b.loadFromFen("3R2n1/k1r2p2/pp3n2/4Q3/2b5/4BBNP/PP3PP1/4K2R w K - 0 29");
         ChessAI ai = new ChessAI();
         BestTurnInformation ret = ai.getBestMove( b, 3);
-        System.out.println(ret.bestMove.prevMove);
+        System.out.println(ret.bestMove.move);
 
     }
 
@@ -52,7 +67,7 @@ class ChessAITest {
         Board b = generateBoardFromMoves(moveStackString);
         String fen = b.getFen();
         AlphaBeta ret = ai.getBestMove(2, b);
-        assertNotEquals("f4ef", ret.prevMove.getSan());
+        assertNotEquals("f4ef", ret.move.getSan());
     }
 
     @Test
@@ -62,8 +77,8 @@ class ChessAITest {
         Board b = generateBoardFromMoves(moveStackString);
         String fen = b.getFen();
         AlphaBeta ret = ai.getBestMove(5, b);
-        System.out.println(ret.prevMove);
-        assertEquals("e8g8", ret.prevMove.toString());
+        System.out.println(ret.move);
+        assertEquals("e8g8", ret.move.toString());
     }
 
     @Test
@@ -72,7 +87,7 @@ class ChessAITest {
         Board b = new Board();
         b.loadFromFen("r3kb1r/1pp2pp1/p2q1n1p/4p3/2BN2b1/1PP2PP1/P1Q5/R3R1K1 b kq - 0 22");
         AlphaBeta ret = ai.getBestMove(6, b);
-        System.out.println(ret.prevMove);
+        System.out.println(ret.move);
     }
 
     @Test
@@ -95,6 +110,19 @@ class ChessAITest {
         list.add(10L);
         long actual = ai.getLastPositionHistoryTimes(list);
         assertEquals(3, actual);
+    }
+
+    @Test
+    public void saveBishopTest(){
+
+        ChessAI ai = new ChessAI();
+        Board b = new Board();
+        b.loadFromFen("rnbqkbnr/1p3pp1/2ppp2p/p7/B2PP3/2N5/PPP2PPP/R1BQK1NR w");
+        String fen = b.getFen();
+
+        AlphaBeta move = ai.getBestMove(5, b);
+        assertEquals("a4b3", move.move.toString());
+
     }
 
     private Board generateBoardFromMoves(String moves){

@@ -10,9 +10,13 @@ import java.util.List;
 public class MoveSorter {
 
     private final Board board;
+    private final Move candidateMove;
+    private final boolean firstRecursion;
 
-    public MoveSorter(Board board){
+    public MoveSorter(Board board, Move candidateMove, boolean firstRecursion){
         this.board = board;
+        this.candidateMove = candidateMove;
+        this.firstRecursion = firstRecursion;
     }
 
     private class CheckComparator implements Comparator<Move> {
@@ -73,6 +77,13 @@ public class MoveSorter {
         List<Move> moves = this.board.legalMoves();
         moves.sort(new AttackComparator(this.board));
         moves.sort(new CheckComparator(this.board));
+        if (this.firstRecursion && this.candidateMove != null) {
+            Move itemToBemovedFirst = this.candidateMove;
+            if(!moves.remove(itemToBemovedFirst)){
+                throw new RuntimeException("Move should be in list " + itemToBemovedFirst);
+            }
+            moves.add(0, itemToBemovedFirst);
+        }
         return moves;
     }
 }
