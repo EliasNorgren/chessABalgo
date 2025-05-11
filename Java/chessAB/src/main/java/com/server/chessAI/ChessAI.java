@@ -2,18 +2,24 @@ package com.server.chessAI;
 
 import com.github.bhlangonijr.chesslib.*;
 import com.github.bhlangonijr.chesslib.move.Move;
+import com.server.chessAI.InternalEval.MyEval;
 import com.server.chessAI.TranspositionEntry.BoundType;
+import com.server.externalEval.cuckoochess.Evaluate;
+
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
 
 public class ChessAI {
 
     private int maxDepth;
     private Map<Long, TranspositionEntry> transpositionTable;
     private Move candidateMove;
+    private final Evaluator evaluator = new Evaluate();
 
-    public AlphaBeta getBestMove(int depth, Board board) {
+//    public ChessAI(Evaluator evaluator) {
+//        this.evaluator = evaluator;
+//    }
+
+    public AlphaBeta getBestMove(int depth, BoardWrapper board) {
         transpositionTable = new HashMap<>();
         this.maxDepth = depth;
         return alphaBeta(board, depth, null, Integer.MIN_VALUE, Integer.MAX_VALUE);
@@ -22,7 +28,7 @@ public class ChessAI {
     public BestTurnInformation getBestMove(double max_time_seconds, List<String> moveStack) {
         System.out.println("Max time " + max_time_seconds);
         transpositionTable = new HashMap<>();
-        Board board = new Board();
+        BoardWrapper board = new BoardWrapper();
         for (String move : moveStack) {
             board.doMove(move);
         }
@@ -31,28 +37,29 @@ public class ChessAI {
         return this.getBestMove(board, max_time_seconds);
     }
 
-    public BestTurnInformation getBestMove(Board board, double max_time_seconds) {
+    public BestTurnInformation getBestMove(BoardWrapper boardWrapper, double max_time_seconds) {
+
         transpositionTable = new HashMap<>();
-        CastleRight whiteCastleRight = board.getCastleRight(Side.WHITE);
-        CastleRight blackCastleRight = board.getCastleRight(Side.BLACK);
+        CastleRight whiteCastleRight = boardWrapper.getCastleRight(Side.WHITE);
+        CastleRight blackCastleRight = boardWrapper.getCastleRight(Side.BLACK);
         System.out.println("White castle: " + whiteCastleRight);
         System.out.println("Black castle: " + blackCastleRight);
 
-        int eval = evaluate(board);
+        int eval = this.evaluator.evalPos(boardWrapper);
         System.out.println("Current eval: " + eval);
-        long repetitions = getLastPositionHistoryTimes(board.getHistory());
+        long repetitions = getLastPositionHistoryTimes(boardWrapper.getHistory());
         System.out.println("This position has been seen " + repetitions + (repetitions == 1 ? " time." : " times.") + "\n");
-        List<Move> moves = board.legalMoves();
+        List<Move> moves = boardWrapper.legalMoves();
         if (moves.size() == 1) {
             System.out.println("Only one move possible: " + moves.get(0).toString() + " eval: " + eval);
             return new BestTurnInformation(new AlphaBeta(moves.get(0), eval), 0);
         }
-        Side side = board.getSideToMove();
+        Side side = boardWrapper.getSideToMove();
         int value = side == Side.WHITE ? Integer.MIN_VALUE : Integer.MAX_VALUE;
         AlphaBeta bestMove = new AlphaBeta(null, value);
         int startDepth = 1;
         long startTime = System.currentTimeMillis();
-        int previousEval = evaluate(board); // or 0
+        int previousEval = this.evaluator.evalPos(boardWrapper); // or 0
         do {
             this.maxDepth = startDepth;
 
@@ -60,11 +67,11 @@ public class ChessAI {
             int alpha = Math.max(Integer.MIN_VALUE, previousEval - aspirationWindow);
             int beta = Math.min(Integer.MAX_VALUE, previousEval + aspirationWindow);
 
-            AlphaBeta bestMoveAtThisDepth = alphaBeta(board, startDepth, null, alpha, beta);
+            AlphaBeta bestMoveAtThisDepth = alphaBeta(boardWrapper, startDepth, null, alpha, beta);
 
             if (bestMoveAtThisDepth.eval <= alpha || bestMoveAtThisDepth.eval >= beta) {
                 // If evaluation was outside the window, re-search normally
-                bestMoveAtThisDepth = alphaBeta(board, startDepth, null, Integer.MIN_VALUE, Integer.MAX_VALUE);
+                bestMoveAtThisDepth = alphaBeta(boardWrapper, startDepth, null, Integer.MIN_VALUE, Integer.MAX_VALUE);
             }
 
             bestMove = bestMoveAtThisDepth;
@@ -85,7 +92,7 @@ public class ChessAI {
         } while (System.currentTimeMillis() - startTime <= (max_time_seconds * 1000));
         if (bestMove.move == null) {
             System.out.println("AI did not find non losing move, picking first");
-            bestMove.move = board.legalMoves().get(0);
+            bestMove.move = boardWrapper.legalMoves().get(0);
             bestMove.eval = value * -1;
         }
         System.out.println("-------------------------------------------------------------");
@@ -98,7 +105,7 @@ public class ChessAI {
     }
 
 
-    private AlphaBeta alphaBeta(Board board, int depth, Move prevMove, int alpha, int beta) {
+    private AlphaBeta alphaBeta(BoardWrapper board, int depth, Move prevMove, int alpha, int beta) {
         long zobristHash = board.getZobristKey();
         TranspositionEntry entry = this.transpositionTable.get(zobristHash);
 
@@ -118,8 +125,22 @@ public class ChessAI {
             }
         }
 
-        if (depth == 0 || board.isDraw() || board.isMated()) {
-            AlphaBeta ret = new AlphaBeta(prevMove, evaluate(board));
+        if (board.isDraw()) {
+            AlphaBeta ret = new AlphaBeta(prevMove, 0);
+            return ret;
+        }
+
+        if (board.isMated()) {
+
+            if (board.getSideToMove() == Side.BLACK) {
+                return new AlphaBeta(prevMove, Integer.MAX_VALUE);
+            } else {
+                return new AlphaBeta(prevMove, Integer.MIN_VALUE);
+            }
+        }
+
+        if (depth == 0) {
+            AlphaBeta ret = new AlphaBeta(prevMove, this.evaluator.evalPos(board));
             return ret;
         }
 
@@ -204,95 +225,8 @@ public class ChessAI {
         return new AlphaBeta(bestMove, value);
     }
 
-    public int evaluate(Board board) {
-
-        if (board.isMated()) {
-            if (board.getSideToMove() == Side.BLACK) {
-                return Integer.MAX_VALUE;
-            } else {
-                return Integer.MIN_VALUE;
-            }
-        }
-
-        if (board.isDraw()) {
-            return 0;
-        }
-
-        int whiteSum = 0;
-        int blackSum = 0;
-
-//        whiteSum += calculateCastlePoints(board.getCastleRight(Side.WHITE));
-//        blackSum += calculateCastlePoints(board.getCastleRight(Side.BLACK));
-
-        for (Piece p : Piece.values()) {
-            if (p == Piece.NONE) {
-                continue;
-            }
-
-            long bitBoard = board.getBitboard(p);
-
-            if (bitBoard == 0L) {
-                continue;
-            }
-
-            if (p.getPieceSide() == Side.WHITE) {
-                long whitePieces = bitBoard & board.getBitboard(Side.WHITE);
-                int whiteCount = Long.bitCount(whitePieces);
-                whiteSum += ChessTables.PIECE_VALUES[p.ordinal()] * whiteCount;
-                List<Square> squares = board.getPieceLocation(p);
-//                for (Square sq : squares) {
-//                    int ordinal = sq.ordinal();
-//                    int row = 7 - ordinal / 8;
-//                    int col = ordinal % 8;
-//                    whiteSum += getValueFromTable(p, row, col);
-//                }
-            } else {
-                long blackPieces = bitBoard & board.getBitboard(Side.BLACK);
-                int blackCount = Long.bitCount(blackPieces);
-                blackSum += ChessTables.PIECE_VALUES[p.ordinal()] * blackCount;
-                List<Square> squares = board.getPieceLocation(p);
-//                for (Square sq : squares) {
-//                    int ordinal = sq.ordinal();
-//                    int row = 7 - ordinal / 8;
-//                    int col = ordinal % 8;
-//                    blackSum += getValueFromTable(p, row, col);
-//                }
-            }
-        }
-        return whiteSum - blackSum;
-    }
-
-    private int calculateCastlePoints(CastleRight castleRight) {
-        switch (castleRight) {
-            case NONE -> {
-                return -50;
-            }
-            case KING_SIDE, QUEEN_SIDE -> {
-                return -25;
-            }
-            case KING_AND_QUEEN_SIDE -> {
-                return 0;
-            }
-        }
-        return 0;
-    }
-
-    private int getValueFromTable(Piece p, int row, int col) {
-        return switch (p) {
-            case WHITE_PAWN -> ChessTables.PAWN_TABLE_WHITE[row][col];
-            case WHITE_KNIGHT -> ChessTables.KNIGHT_TABLE_WHITE[row][col];
-            case WHITE_BISHOP -> ChessTables.BISHOP_TABLE_WHITE[row][col];
-            case WHITE_ROOK -> ChessTables.ROOK_TABLE_WHITE[row][col];
-            case WHITE_QUEEN -> ChessTables.QUEEN_TABLE_WHITE[row][col];
-            case WHITE_KING -> ChessTables.KING_TABLE_WHITE[row][col];
-            case BLACK_PAWN -> ChessTables.PAWN_TABLE_BLACK[row][col];
-            case BLACK_KNIGHT -> ChessTables.KNIGHT_TABLE_BLACK[row][col];
-            case BLACK_BISHOP -> ChessTables.BISHOP_TABLE_BLACK[row][col];
-            case BLACK_ROOK -> ChessTables.ROOK_TABLE_BLACK[row][col];
-            case BLACK_QUEEN -> ChessTables.QUEEN_TABLE_BLACK[row][col];
-            case BLACK_KING -> ChessTables.KING_TABLE_BLACK[row][col];
-            default -> 0;
-        };
+    public int evaluate(BoardWrapper board) {
+        return this.evaluator.evalPos(board);
     }
 }
 

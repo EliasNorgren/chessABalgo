@@ -3,6 +3,7 @@ package com.server;
 
 import com.server.chessAI.BestTurnInformation;
 import com.server.chessAI.ChessAI;
+import com.server.chessAI.InternalEval.MyEval;
 import org.springframework.web.bind.annotation.*;
 
 

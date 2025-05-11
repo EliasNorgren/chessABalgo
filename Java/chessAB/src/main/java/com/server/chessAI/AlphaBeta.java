@@ -11,4 +11,9 @@ public class AlphaBeta {
         this.move = prevMove;
         this.eval = eval;
     }
+
+    @Override
+    public String toString() {
+        return "Move: " + move + " eval: " + eval;
+    }
 }
