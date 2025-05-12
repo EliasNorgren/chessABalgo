@@ -274,8 +274,6 @@ public class Evaluate implements Evaluator {
         
         score = endGameEval(pos, score);
 
-//        if (!pos.isWhiteMove())
-//            score = -score;
         return score;
 
         // FIXME! Test penalty if side to move has >1 hanging piece
@@ -335,7 +333,7 @@ public class Evaluate implements Evaluator {
 	
     
     /** Compute white_material - black_material. */
-    static final int material(IPosition pos) {
+    static int material(IPosition pos) {
         return pos.getwMtrl() - pos.getbMtrl();
     }
     
@@ -394,7 +392,7 @@ public class Evaluate implements Evaluator {
 
         // Knights
         {
-            final int t1 = qV + 2 * rV + 1 * bV + 1 * nV + 6 * pV;
+            final int t1 = qV + 2 * rV + bV + nV + 6 * pV;
             final int t2 = nV + 8 * pV;
             int n1 = pos.getPST1(Piece.WKNIGHT);
             int n2 = pos.getPST2(Piece.WKNIGHT);
@@ -571,7 +569,7 @@ public class Evaluate implements Evaluator {
                     int y = pos.getY(sq);
                     int pawnDist = Math.min(5, y);
                     int kingDistX = Math.abs(kingX - x);
-                    int kingDistY = Math.abs(kingY - 0);
+                    int kingDistY = Math.abs(kingY);
                     int kingDist = Math.max(kingDistX, kingDistY);
                     int kScore = kingDist * 4;
                     if (kingDist > pawnDist) kScore += (kingDist - pawnDist) * (kingDist - pawnDist);
@@ -613,29 +611,28 @@ public class Evaluate implements Evaluator {
         // Evaluate backward pawns, defined as a pawn that guards a friendly pawn,
         // can't be guarded by friendly pawns, can advance, but can't advance without 
         // being captured by an enemy pawn.
-        long wPawnAttacks = (((wPawns & BitBoard.maskBToHFiles) << 7) |
-                             ((wPawns & BitBoard.maskAToGFiles) << 9));
-        long bPawnAttacks = (((bPawns & BitBoard.maskBToHFiles) >>> 9) |
-                             ((bPawns & BitBoard.maskAToGFiles) >>> 7));
-        long wBackward = wPawns & ~((wPawns | bPawns) >>> 8) & (bPawnAttacks >>> 8) &
-                         ~BitBoard.northFill(wPawnAttacks);
+        long l1 = ((wPawns & BitBoard.maskBToHFiles) << 7) |
+                ((wPawns & BitBoard.maskAToGFiles) << 9);
+        long l = ((bPawns & BitBoard.maskBToHFiles) >>> 9) |
+                ((bPawns & BitBoard.maskAToGFiles) >>> 7);
+        long wBackward = wPawns & ~((wPawns | bPawns) >>> 8) & (l >>> 8) &
+                         ~BitBoard.northFill(l1);
         wBackward &= (((wPawns & BitBoard.maskBToHFiles) >>> 9) |
                       ((wPawns & BitBoard.maskAToGFiles) >>> 7));
         wBackward &= ~BitBoard.northFill(bPawnFiles);
-        long bBackward = bPawns & ~((wPawns | bPawns) << 8) & (wPawnAttacks << 8) &
-                         ~BitBoard.southFill(bPawnAttacks);
+        long bBackward = bPawns & ~((wPawns | bPawns) << 8) & (l1 << 8) &
+                         ~BitBoard.southFill(l);
         bBackward &= (((bPawns & BitBoard.maskBToHFiles) << 7) |
                       ((bPawns & BitBoard.maskAToGFiles) << 9));
         bBackward &= ~BitBoard.northFill(wPawnFiles);
         score -= (Long.bitCount(wBackward) - Long.bitCount(bBackward)) * 15;
 
         // Evaluate passed pawn bonus, white
-        long passedPawnsW = wPawns & ~BitBoard.southFill(bPawns | bPawnAttacks | (wPawns >>> 8));
+        long passedPawnsW = wPawns & ~BitBoard.southFill(bPawns | l | (wPawns >>> 8));
         final int[] ppBonus = {-1,24,26,30,36,47,64,-1};
         int passedBonusW = 0;
         if (passedPawnsW != 0) {
-            long guardedPassedW = passedPawnsW & (((wPawns & BitBoard.maskBToHFiles) << 7) |
-                                                  ((wPawns & BitBoard.maskAToGFiles) << 9));
+            long guardedPassedW = passedPawnsW & l1;
             passedBonusW += 15 * Long.bitCount(guardedPassedW);
             long m = passedPawnsW;
             while (m != 0) {
@@ -647,11 +644,10 @@ public class Evaluate implements Evaluator {
         }
 
         // Evaluate passed pawn bonus, black
-        long passedPawnsB = bPawns & ~BitBoard.northFill(wPawns | wPawnAttacks | (bPawns << 8));
+        long passedPawnsB = bPawns & ~BitBoard.northFill(wPawns | l1 | (bPawns << 8));
         int passedBonusB = 0;
         if (passedPawnsB != 0) {
-            long guardedPassedB = passedPawnsB & (((bPawns & BitBoard.maskBToHFiles) >>> 9) |
-                                                  ((bPawns & BitBoard.maskAToGFiles) >>> 7));
+            long guardedPassedB = passedPawnsB & l;
             passedBonusB += 15 * Long.bitCount(guardedPassedB);
             long m = passedPawnsB;
             while (m != 0) {
@@ -885,8 +881,7 @@ public class Evaluate implements Evaluator {
             }
         }
         score += (bKingAttacks - wKingAttacks) * 4;
-        final int kSafety = interpolate(m, minM, 0, maxM, score);
-        return kSafety;
+        return interpolate(m, minM, 0, maxM, score);
     }
 
     private static final class KingSafetyHashData {
@@ -993,8 +988,7 @@ public class Evaluate implements Evaluator {
             // King + minor piece vs king + minor piece is a draw
             return 0;
         }
-        if (!handled && (pos.getwMtrl() == qV) && (pos.getbMtrl() == pV) &&
-            (Long.bitCount(pos.getPieceTypeBB(Piece.WQUEEN)) == 1)) {
+        if (pos.getwMtrl() == qV && pos.getbMtrl() == pV && Long.bitCount(pos.getPieceTypeBB(Piece.WQUEEN)) == 1) {
             int wk = BitBoard.numberOfTrailingZeros(pos.getPieceTypeBB(Piece.WKING));
             int wq = BitBoard.numberOfTrailingZeros(pos.getPieceTypeBB(Piece.WQUEEN));
             int bk = BitBoard.numberOfTrailingZeros(pos.getPieceTypeBB(Piece.BKING));
@@ -1137,30 +1131,24 @@ public class Evaluate implements Evaluator {
         // FIXME! KRBKR is very hard to draw
     }
 
-    private static final int evalKQKP(IPosition pos, int wKing, int wQueen, int bKing, int bPawn) {
+    private static int evalKQKP(IPosition pos, int wKing, int wQueen, int bKing, int bPawn) {
         boolean canWin = false;
         if (((1L << bKing) & 0xFFFF) == 0) {
             canWin = true; // King doesn't support pawn
         } else if (Math.abs(pos.getX(bPawn) - pos.getX(bKing)) > 2) {
             canWin = true; // King doesn't support pawn
         } else {
-            switch (bPawn) {
-            case 8:  // a2
-                canWin = ((1L << wKing) & 0x0F1F1F1F1FL) != 0;
-                break;
-            case 10: // c2
-                canWin = ((1L << wKing) & 0x071F1F1FL) != 0;
-                break;
-            case 13: // f2
-                canWin = ((1L << wKing) & 0xE0F8F8F8L) != 0;
-                break;
-            case 15: // h2
-                canWin = ((1L << wKing) & 0xF0F8F8F8F8L) != 0;
-                break;
-            default:
-                canWin = true;
-                break;
-            }
+            canWin = switch (bPawn) {
+                case 8 ->  // a2
+                        ((1L << wKing) & 0x0F1F1F1F1FL) != 0;
+                case 10 -> // c2
+                        ((1L << wKing) & 0x071F1F1FL) != 0;
+                case 13 -> // f2
+                        ((1L << wKing) & 0xE0F8F8F8L) != 0;
+                case 15 -> // h2
+                        ((1L << wKing) & 0xF0F8F8F8F8L) != 0;
+                default -> true;
+            };
         }
 
         final int dist = Math.max(Math.abs(pos.getX(wKing)-pos.getX(bPawn)),
@@ -1171,7 +1159,7 @@ public class Evaluate implements Evaluator {
         return score;
     }
 
-    private static final int kpkEval(IPosition pos, int wKing, int bKing, int wPawn, boolean whiteMove) {
+    private static int kpkEval(IPosition pos, int wKing, int bKing, int wPawn, boolean whiteMove) {
         if (pos.getX(wKing) >= 4) { // Mirror X
             wKing ^= 7;
             bKing ^= 7;
@@ -1190,7 +1178,7 @@ public class Evaluate implements Evaluator {
         return qV - pV / 4 * (7-pos.getY(wPawn));
     }
 
-    private static final int krkpEval(IPosition pos, int wKing, int bKing, int bPawn, boolean whiteMove) {
+    private static int krkpEval(IPosition pos, int wKing, int bKing, int bPawn, boolean whiteMove) {
         if (pos.getX(bKing) >= 4) { // Mirror X
             wKing ^= 7;
             bKing ^= 7;
@@ -1215,7 +1203,7 @@ public class Evaluate implements Evaluator {
      * Interpolate between (x1,y1) and (x2,y2).
      * If x < x1, return y1, if x > x2 return y2. Otherwise, use linear interpolation.
      */
-    static final int interpolate(int x, int x1, int y1, int x2, int y2) {
+    static int interpolate(int x, int x1, int y1, int x2, int y2) {
         if (x > x2) {
             return y2;
         } else if (x < x1) {

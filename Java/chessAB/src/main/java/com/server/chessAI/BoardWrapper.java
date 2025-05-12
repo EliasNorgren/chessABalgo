@@ -1,18 +1,18 @@
 package com.server.chessAI;
 
 import com.github.bhlangonijr.chesslib.*;
+import com.github.bhlangonijr.chesslib.game.GameContext;
 import com.server.externalEval.cuckoochess.BitBoard;
 import com.server.externalEval.cuckoochess.Evaluate;
 import com.server.externalEval.cuckoochess.IPosition;
 
 import java.security.SecureRandom;
 import java.util.EnumMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
 
-public class BoardWrapper extends Board implements IPosition {
+public class BoardWrapper implements IPosition {
 
     private final static  Piece[] PIDToPieceTable;
     private static final Map<Piece, Integer> pieceToPIDTable;
@@ -20,10 +20,16 @@ public class BoardWrapper extends Board implements IPosition {
     private static final long[] ZOBRIST_WHITE_PAWNS = new long[64];
     private static final long[] ZOBRIST_BLACK_PAWNS = new long[64];
 
+    public final Board board;
+
+    public BoardWrapper(Board b){
+        this.board = b;
+    }
 
     public BoardWrapper(){
-        super();
+        this.board = new Board();
     }
+
 
     static {
         PIDToPieceTable = new Piece[13];
@@ -59,37 +65,37 @@ public class BoardWrapper extends Board implements IPosition {
     @Override
     public long getPieceTypeBB(int pid) {
         if (isWhite(pid)) {
-            return super.getBitboard(Side.WHITE)
-                    & super.getBitboard(PIDToPieceTable[pid]);
+            return board.getBitboard(Side.WHITE)
+                    & board.getBitboard(PIDToPieceTable[pid]);
         }else {
-            return super.getBitboard(Side.BLACK)
-                    & super.getBitboard(PIDToPieceTable[pid]);
+            return board.getBitboard(Side.BLACK)
+                    & board.getBitboard(PIDToPieceTable[pid]);
         }
     }
 
     @Override
     public long getWhiteBB() {
-        return super.getBitboard(Side.WHITE);
+        return board.getBitboard(Side.WHITE);
     }
 
     @Override
     public long getBlackBB() {
-        return super.getBitboard(Side.BLACK);
+        return board.getBitboard(Side.BLACK);
     }
 
     @Override
     public int getPIDBySquare(int squareID) {
-        return pieceToPIDTable.get(super.getPiece(Square.squareAt(squareID)));
+        return pieceToPIDTable.get(board.getPiece(Square.squareAt(squareID)));
     }
 
     @Override
     public int getWKingSQ() {
-        return super.getKingSquare(Side.WHITE).ordinal();
+        return board.getKingSquare(Side.WHITE).ordinal();
     }
 
     @Override
     public int getBKingSQ() {
-        return super.getKingSquare(Side.BLACK).ordinal();
+        return board.getKingSquare(Side.BLACK).ordinal();
     }
 
     @Override
@@ -97,7 +103,7 @@ public class BoardWrapper extends Board implements IPosition {
         Piece p = PIDToPieceTable[pid];
         int score = 0;
         int[] pst1 = Evaluate.psTab1[pid];
-        for (Square sq : super.getPieceLocation(p)) {
+        for (Square sq : board.getPieceLocation(p)) {
             score += pst1[sq.ordinal()];
         }
         return score;
@@ -108,7 +114,7 @@ public class BoardWrapper extends Board implements IPosition {
         Piece p = PIDToPieceTable[pid];
         int score = 0;
         int[] pst2 = Evaluate.psTab2[pid];
-        for (Square sq : super.getPieceLocation(p)) {
+        for (Square sq : board.getPieceLocation(p)) {
             score += pst2[sq.ordinal()];
         }
         return score;
@@ -119,8 +125,8 @@ public class BoardWrapper extends Board implements IPosition {
     public long pawnZobristHash() {
         long hash = 0L;
 
-        long wp = super.getBitboard(Piece.WHITE_PAWN);
-        long bp = super.getBitboard(Piece.BLACK_PAWN);
+        long wp = board.getBitboard(Piece.WHITE_PAWN);
+        long bp = board.getBitboard(Piece.BLACK_PAWN);
 
         // White pawns
         while (wp != 0) {
@@ -166,30 +172,30 @@ public class BoardWrapper extends Board implements IPosition {
 
     @Override
     public boolean isWhiteMove() {
-        return super.getSideToMove().equals(Side.WHITE);
+        return board.getSideToMove().equals(Side.WHITE);
     }
 
     @Override
     public boolean a1Castle() {
-        CastleRight castleRight = super.getCastleRight(Side.WHITE);
+        CastleRight castleRight = board.getCastleRight(Side.WHITE);
         return castleRight.equals(CastleRight.KING_AND_QUEEN_SIDE) || castleRight.equals(CastleRight.QUEEN_SIDE);
     }
 
     @Override
     public boolean h1Castle() {
-        CastleRight castleRight = super.getCastleRight(Side.WHITE);
+        CastleRight castleRight = board.getCastleRight(Side.WHITE);
         return castleRight.equals(CastleRight.KING_AND_QUEEN_SIDE) || castleRight.equals(CastleRight.KING_SIDE);
     }
 
     @Override
     public boolean a8Castle() {
-        CastleRight castleRight = super.getCastleRight(Side.BLACK);
+        CastleRight castleRight = board.getCastleRight(Side.BLACK);
         return castleRight.equals(CastleRight.KING_AND_QUEEN_SIDE) || castleRight.equals(CastleRight.QUEEN_SIDE);
     }
 
     @Override
     public boolean h8Castle() {
-        CastleRight castleRight = super.getCastleRight(Side.BLACK);
+        CastleRight castleRight = board.getCastleRight(Side.BLACK);
         return castleRight.equals(CastleRight.KING_AND_QUEEN_SIDE) || castleRight.equals(CastleRight.KING_SIDE);
     }
 
@@ -216,18 +222,17 @@ public class BoardWrapper extends Board implements IPosition {
     }
 
     private int getSumForPieceAndSide(Side s, Piece p) {
-        long sideBoard = super.getBitboard(s);
-        long pieceBoard = super.getBitboard(p);
-        long combined = sideBoard & pieceBoard;
-        long bitCount = Long.bitCount(combined);
-        int pVal = Evaluate.pieceValue[pieceToPIDTable.get(p)];
-        return (int) (pVal * bitCount);
-//        return Long.bitCount(super.getBitboard(s) & super.getBitboard(p))
-//                * Evaluate.pieceValue[pieceToPIDTable.get(p)];
+        return Long.bitCount(board.getBitboard(s) & board.getBitboard(p))
+                * Evaluate.pieceValue[pieceToPIDTable.get(p)];
     }
 
     @Override
     public String toString() {
-        return super.getFen();
+        return board.getFen();
     }
+
+    public BoardWrapper copy() {
+        return new BoardWrapper(this.board.clone());
+    }
+
 }

@@ -22,7 +22,7 @@ public class ChessAI {
     public AlphaBeta getBestMove(int depth, BoardWrapper board) {
         transpositionTable = new HashMap<>();
         this.maxDepth = depth;
-        return alphaBeta(board, depth, null, Integer.MIN_VALUE, Integer.MAX_VALUE);
+        return alphaBeta(board, depth, null, Integer.MIN_VALUE + depth, Integer.MAX_VALUE - depth);
     }
 
     public BestTurnInformation getBestMove(double max_time_seconds, List<String> moveStack) {
@@ -30,31 +30,30 @@ public class ChessAI {
         transpositionTable = new HashMap<>();
         BoardWrapper board = new BoardWrapper();
         for (String move : moveStack) {
-            board.doMove(move);
+            board.board.doMove(move);
         }
-        System.out.println("Pushed board into FEN: " + board.getFen());
+        System.out.println("Pushed board into FEN: " + board.board.getFen());
 
         return this.getBestMove(board, max_time_seconds);
     }
 
     public BestTurnInformation getBestMove(BoardWrapper boardWrapper, double max_time_seconds) {
-
         transpositionTable = new HashMap<>();
-        CastleRight whiteCastleRight = boardWrapper.getCastleRight(Side.WHITE);
-        CastleRight blackCastleRight = boardWrapper.getCastleRight(Side.BLACK);
+        CastleRight whiteCastleRight = boardWrapper.board.getCastleRight(Side.WHITE);
+        CastleRight blackCastleRight = boardWrapper.board.getCastleRight(Side.BLACK);
         System.out.println("White castle: " + whiteCastleRight);
         System.out.println("Black castle: " + blackCastleRight);
 
         int eval = this.evaluator.evalPos(boardWrapper);
         System.out.println("Current eval: " + eval);
-        long repetitions = getLastPositionHistoryTimes(boardWrapper.getHistory());
+        long repetitions = getLastPositionHistoryTimes(boardWrapper.board.getHistory());
         System.out.println("This position has been seen " + repetitions + (repetitions == 1 ? " time." : " times.") + "\n");
-        List<Move> moves = boardWrapper.legalMoves();
+        List<Move> moves = boardWrapper.board.legalMoves();
         if (moves.size() == 1) {
             System.out.println("Only one move possible: " + moves.get(0).toString() + " eval: " + eval);
             return new BestTurnInformation(new AlphaBeta(moves.get(0), eval), 0);
         }
-        Side side = boardWrapper.getSideToMove();
+        Side side = boardWrapper.board.getSideToMove();
         int value = side == Side.WHITE ? Integer.MIN_VALUE : Integer.MAX_VALUE;
         AlphaBeta bestMove = new AlphaBeta(null, value);
         int startDepth = 1;
@@ -64,14 +63,15 @@ public class ChessAI {
             this.maxDepth = startDepth;
 
             int aspirationWindow = 50;
-            int alpha = Math.max(Integer.MIN_VALUE, previousEval - aspirationWindow);
-            int beta = Math.min(Integer.MAX_VALUE, previousEval + aspirationWindow);
+            int alpha = Math.max(Integer.MIN_VALUE + startDepth, previousEval - aspirationWindow);
+            int beta = Math.min(Integer.MAX_VALUE - startDepth, previousEval + aspirationWindow);
 
-            AlphaBeta bestMoveAtThisDepth = alphaBeta(boardWrapper, startDepth, null, alpha, beta);
+            AlphaBeta bestMoveAtThisDepth = alphaBeta(boardWrapper.copy(), startDepth, null, alpha, beta);
 
             if (bestMoveAtThisDepth.eval <= alpha || bestMoveAtThisDepth.eval >= beta) {
                 // If evaluation was outside the window, re-search normally
-                bestMoveAtThisDepth = alphaBeta(boardWrapper, startDepth, null, Integer.MIN_VALUE, Integer.MAX_VALUE);
+                bestMoveAtThisDepth = alphaBeta(boardWrapper.copy(), startDepth, null,
+                        Integer.MIN_VALUE + startDepth, Integer.MAX_VALUE - startDepth);
             }
 
             bestMove = bestMoveAtThisDepth;
@@ -83,16 +83,16 @@ public class ChessAI {
                     + " Eval: " + bestMove.eval + " Move: "
                     + bestMove.move + " Time: " + ((System.currentTimeMillis() - startTime) / 1000.0));
 
-            if ((side == Side.WHITE && bestMove.eval == Integer.MAX_VALUE)
-                    || side == Side.BLACK && bestMove.eval == Integer.MIN_VALUE) {
+            if (bestMove.eval == Integer.MAX_VALUE - startDepth || bestMove.eval == Integer.MIN_VALUE + startDepth) {
                 break;
             }
 
             startDepth++;
+//        } while(true);
         } while (System.currentTimeMillis() - startTime <= (max_time_seconds * 1000));
         if (bestMove.move == null) {
-            System.out.println("AI did not find non losing move, picking first");
-            bestMove.move = boardWrapper.legalMoves().get(0);
+            System.out.println("AI did not find move, picking first");
+            bestMove.move = boardWrapper.board.legalMoves().get(0);
             bestMove.eval = value * -1;
         }
         System.out.println("-------------------------------------------------------------");
@@ -106,7 +106,7 @@ public class ChessAI {
 
 
     private AlphaBeta alphaBeta(BoardWrapper board, int depth, Move prevMove, int alpha, int beta) {
-        long zobristHash = board.getZobristKey();
+        long zobristHash = board.board.getZobristKey();
         TranspositionEntry entry = this.transpositionTable.get(zobristHash);
 
         if (entry != null && entry.depth >= depth) {
@@ -125,35 +125,34 @@ public class ChessAI {
             }
         }
 
-        if (board.isDraw()) {
+        if (board.board.isDraw()) {
             AlphaBeta ret = new AlphaBeta(prevMove, 0);
             return ret;
         }
 
-        if (board.isMated()) {
-
-            if (board.getSideToMove() == Side.BLACK) {
-                return new AlphaBeta(prevMove, Integer.MAX_VALUE);
+        if (board.board.isMated()) {
+            int currentDepth = this.maxDepth - depth;
+            if (board.board.getSideToMove() == Side.BLACK) {
+                return new AlphaBeta(prevMove, Integer.MAX_VALUE - currentDepth);
             } else {
-                return new AlphaBeta(prevMove, Integer.MIN_VALUE);
+                return new AlphaBeta(prevMove, Integer.MIN_VALUE + currentDepth);
             }
         }
 
         if (depth == 0) {
-            AlphaBeta ret = new AlphaBeta(prevMove, this.evaluator.evalPos(board));
-            return ret;
+            return new AlphaBeta(prevMove, this.evaluator.evalPos(board));
         }
 
-        List<Move> orderedMoves = new MoveSorter(board, candidateMove, prevMove == null).sort();
+        List<Move> orderedMoves = new MoveSorter(board.board, candidateMove, prevMove == null).sort();
         int originalAlpha = alpha;
         Move bestMove = prevMove;
         int value;
         //        MAX
-        if (board.getSideToMove() == Side.WHITE) {
+        if (board.board.getSideToMove() == Side.WHITE) {
             value = Integer.MIN_VALUE;
             boolean firstMove = true;
             for (Move move : orderedMoves) {
-                if (!board.doMove(move, true)) {
+                if (!board.board.doMove(move, true)) {
                     System.out.println("Error");
                     System.exit(1);
                 }
@@ -171,7 +170,7 @@ public class ChessAI {
                     }
                 }
                 firstMove = false;
-                board.undoMove();
+                board.board.undoMove();
                 int currentVal = ret.eval;
                 if (currentVal > value) {
                     value = currentVal;
@@ -187,7 +186,7 @@ public class ChessAI {
             value = Integer.MAX_VALUE;
             boolean firstMove = true;
             for (Move move : orderedMoves) {
-                board.doMove(move);
+                board.board.doMove(move);
                 AlphaBeta ret;
                 if (firstMove) {
                     ret = alphaBeta(board, depth - 1, move, alpha, beta);
@@ -199,7 +198,7 @@ public class ChessAI {
                     }
                 }
                 firstMove = false;
-                board.undoMove();
+                board.board.undoMove();
                 int currentVal = ret.eval;
                 if (currentVal < value) {
                     value = currentVal;

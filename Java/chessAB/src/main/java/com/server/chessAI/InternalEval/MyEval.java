@@ -11,15 +11,15 @@ public class MyEval implements Evaluator {
     @Override
     public int evalPos(BoardWrapper board) {
 
-        if (board.isMated()) {
-            if (board.getSideToMove() == Side.BLACK) {
+        if (board.board.isMated()) {
+            if (board.board.getSideToMove() == Side.BLACK) {
                 return Integer.MAX_VALUE;
             } else {
                 return Integer.MIN_VALUE;
             }
         }
 
-        if (board.isDraw()) {
+        if (board.board.isDraw()) {
             return 0;
         }
 
@@ -34,17 +34,17 @@ public class MyEval implements Evaluator {
                 continue;
             }
 
-            long bitBoard = board.getBitboard(p);
+            long bitBoard = board.board.getBitboard(p);
 
             if (bitBoard == 0L) {
                 continue;
             }
 
             if (p.getPieceSide() == Side.WHITE) {
-                long whitePieces = bitBoard & board.getBitboard(Side.WHITE);
+                long whitePieces = bitBoard & board.board.getBitboard(Side.WHITE);
                 int whiteCount = Long.bitCount(whitePieces);
                 whiteSum += ChessTables.PIECE_VALUES[p.ordinal()] * whiteCount;
-                List<Square> squares = board.getPieceLocation(p);
+                List<Square> squares = board.board.getPieceLocation(p);
                 for (Square sq : squares) {
                     int ordinal = sq.ordinal();
                     int row = 7 - ordinal / 8;
@@ -52,10 +52,10 @@ public class MyEval implements Evaluator {
                     whiteSum += getValueFromTable(p, row, col);
                 }
             } else {
-                long blackPieces = bitBoard & board.getBitboard(Side.BLACK);
+                long blackPieces = bitBoard & board.board.getBitboard(Side.BLACK);
                 int blackCount = Long.bitCount(blackPieces);
                 blackSum += ChessTables.PIECE_VALUES[p.ordinal()] * blackCount;
-                List<Square> squares = board.getPieceLocation(p);
+                List<Square> squares = board.board.getPieceLocation(p);
                 for (Square sq : squares) {
                     int ordinal = sq.ordinal();
                     int row = 7 - ordinal / 8;
