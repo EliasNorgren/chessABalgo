@@ -20,7 +20,7 @@ class ChessTablesTest {
 
         AlphaBeta ret = ai.getBestMove(5, b);
         System.out.println(ret.move + " " + ret.eval);
-        assertTrue(!ret.move.toString().equals("e8f8"));
+        assertNotEquals("e8f8", ret.move.toString());
     }
 
     @Test

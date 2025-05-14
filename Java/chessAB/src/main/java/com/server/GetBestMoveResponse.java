@@ -6,6 +6,15 @@ public class GetBestMoveResponse {
     private float eval;
     private int depth;
 
+    public String getLine() {
+        return line;
+    }
+
+    public void setLine(String line) {
+        this.line = line;
+    }
+
+    private String line;
     // Getters and setters
 
     public String getBestMove() {

@@ -7,6 +7,7 @@ import com.server.chessAI.TranspositionEntry.BoundType;
 import com.server.externalEval.cuckoochess.Evaluate;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class ChessAI {
 
@@ -50,12 +51,13 @@ public class ChessAI {
         System.out.println("This position has been seen " + repetitions + (repetitions == 1 ? " time." : " times.") + "\n");
         List<Move> moves = boardWrapper.board.legalMoves();
         if (moves.size() == 1) {
-            System.out.println("Only one move possible: " + moves.get(0).toString() + " eval: " + eval);
-            return new BestTurnInformation(new AlphaBeta(moves.get(0), eval), 0);
+            System.out.println("-------------------------------------------------------------\n");
+            System.out.println("Only one move possible: " + moves.getFirst().toString() + " eval: " + eval);
+            return new BestTurnInformation(new AlphaBeta(moves.getFirst(), eval, new Stack<>()), 0);
         }
         Side side = boardWrapper.board.getSideToMove();
         int value = side == Side.WHITE ? Integer.MIN_VALUE : Integer.MAX_VALUE;
-        AlphaBeta bestMove = new AlphaBeta(null, value);
+        AlphaBeta bestMove;
         int startDepth = 1;
         long startTime = System.currentTimeMillis();
         int previousEval = this.evaluator.evalPos(boardWrapper); // or 0
@@ -92,9 +94,13 @@ public class ChessAI {
         } while (System.currentTimeMillis() - startTime <= (max_time_seconds * 1000));
         if (bestMove.move == null) {
             System.out.println("AI did not find move, picking first");
-            bestMove.move = boardWrapper.board.legalMoves().get(0);
+            bestMove.move = boardWrapper.board.legalMoves().getFirst();
             bestMove.eval = value * -1;
         }
+        System.out.println("\nLine: " + bestMove.line.reversed().stream()
+                .map(Move::toString)
+                .collect(Collectors.joining(" ")) + "\n");
+
         System.out.println("-------------------------------------------------------------");
         return new BestTurnInformation(bestMove, startDepth);
     }
@@ -112,7 +118,7 @@ public class ChessAI {
         if (entry != null && entry.depth >= depth) {
             switch (entry.bound) {
                 case EXACT:
-                    return new AlphaBeta(entry.bestMove, entry.eval);
+                    return new AlphaBeta(entry.bestMove, entry.eval, new Stack<>());
                 case LOWERBOUND:
                     alpha = Math.max(alpha, entry.eval);
                     break;
@@ -121,31 +127,31 @@ public class ChessAI {
                     break;
             }
             if (alpha >= beta) {
-                return new AlphaBeta(entry.bestMove, entry.eval);
+                return new AlphaBeta(entry.bestMove, entry.eval, (Stack<Move>) entry.line.clone());
             }
         }
 
         if (board.board.isDraw()) {
-            return new AlphaBeta(prevMove, 0);
+            return new AlphaBeta(prevMove, 0, new Stack<>());
         }
 
         if (board.board.isMated()) {
             int currentDepth = this.maxDepth - depth;
             if (board.board.getSideToMove() == Side.BLACK) {
-                return new AlphaBeta(prevMove, Integer.MAX_VALUE - currentDepth);
+                return new AlphaBeta(prevMove, Integer.MAX_VALUE - currentDepth, new Stack<>());
             } else {
-                return new AlphaBeta(prevMove, Integer.MIN_VALUE + currentDepth);
+                return new AlphaBeta(prevMove, Integer.MIN_VALUE + currentDepth, new Stack<>());
             }
         }
 
         if (depth == 0) {
-            return new AlphaBeta(prevMove, this.evaluator.evalPos(board));
+            return new AlphaBeta(prevMove, this.evaluator.evalPos(board), new Stack<>());
         }
 
         List<Move> orderedMoves = new MoveSorter(board.board, candidateMove, prevMove == null).sort();
         int originalAlpha = alpha;
         // TODO: Set value to alpha or beta??
-        AlphaBeta bestMove = new AlphaBeta(null, 0);
+        AlphaBeta bestMove = new AlphaBeta(null, 0, null);
         //        MAX
         if (board.board.getSideToMove() == Side.WHITE) {
             bestMove.eval = Integer.MIN_VALUE;
@@ -169,7 +175,7 @@ public class ChessAI {
                 board.board.undoMove();
 
                 if (ret.eval > bestMove.eval) {
-                    bestMove = new AlphaBeta(move, ret.eval);
+                    bestMove = new AlphaBeta(move, ret.eval, ret.line);
                 }
                 alpha = Math.max(alpha, bestMove.eval);
                 if (bestMove.eval >= beta) {
@@ -195,7 +201,7 @@ public class ChessAI {
                 }
                 board.board.undoMove();
                 if (ret.eval < bestMove.eval) {
-                    bestMove = new AlphaBeta(move, ret.eval);
+                    bestMove = new AlphaBeta(move, ret.eval, ret.line);
                 }
                 beta = Math.min(beta, bestMove.eval);
                 if (bestMove.eval <= alpha) {
@@ -212,8 +218,9 @@ public class ChessAI {
         } else {
             bound = BoundType.EXACT;
         }
+        bestMove.line.push(bestMove.move);
         this.transpositionTable.put(zobristHash,
-                new TranspositionEntry(bestMove.move, bestMove.eval, depth, bound));
+                new TranspositionEntry(bestMove.move, bestMove.eval, depth, bound, bestMove.line));
         return bestMove;
     }
 

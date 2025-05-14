@@ -1,25 +1,25 @@
 package com.server.chessAI;
 
-import com.github.bhlangonijr.chesslib.Board;
-import com.github.bhlangonijr.chesslib.move.Move;
 import org.junit.jupiter.api.Test;
-
 
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
+
 
 import static org.junit.jupiter.api.Assertions.*;
 class ChessAITest {
 
     @Test
     public void checkMateTest(){
+
         ChessAI ai = new ChessAI();
         BoardWrapper b = new BoardWrapper();
 
         b.board.loadFromFen("3k4/6R1/6nR/8/8/8/8/7K w");
 
         AlphaBeta move1 = ai.getBestMove(5, b);
+        System.out.println(move1.line.reversed());
         assertEquals("h6g6", move1.move.toString());
         assertEquals(Integer.MAX_VALUE - 5, move1.eval);
         b.board.doMove(move1.move);
@@ -49,6 +49,12 @@ class ChessAITest {
         AlphaBeta move = ai.getBestMove(9, b);
         assertEquals("g3g5", move.move.toString());
         assertEquals(Integer.MAX_VALUE - 9, move.eval);
+
+        b = new BoardWrapper();
+        b.board.loadFromFen("8/8/8/2k5/7R/6R1/8/7K w - - 0 1");
+        BestTurnInformation ret = ai.getBestMove(b, 10);
+        assertEquals("g3g5", ret.bestMove.move.toString());
+        assertEquals(Integer.MAX_VALUE - 9, ret.bestMove.eval);
 
     }
 
@@ -122,9 +128,9 @@ class ChessAITest {
         b.board.loadFromFen("rnbqkbnr/1p3pp1/2ppp2p/p7/B2PP3/2N5/PPP2PPP/R1BQK1NR w");
         String fen = b.board.getFen();
 
-        AlphaBeta move = ai.getBestMove(6, b);
+        AlphaBeta move = ai.getBestMove(8, b);
+        System.out.println(move.line.reversed());
         assertEquals("a2a3", move.move.toString());
-
     }
 
     @Test
