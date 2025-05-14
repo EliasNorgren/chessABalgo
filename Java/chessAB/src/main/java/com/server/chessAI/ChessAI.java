@@ -126,8 +126,7 @@ public class ChessAI {
         }
 
         if (board.board.isDraw()) {
-            AlphaBeta ret = new AlphaBeta(prevMove, 0);
-            return ret;
+            return new AlphaBeta(prevMove, 0);
         }
 
         if (board.board.isMated()) {
@@ -145,20 +144,18 @@ public class ChessAI {
 
         List<Move> orderedMoves = new MoveSorter(board.board, candidateMove, prevMove == null).sort();
         int originalAlpha = alpha;
-        Move bestMove = prevMove;
-        int value;
+        // TODO: Set value to alpha or beta??
+        AlphaBeta bestMove = new AlphaBeta(null, 0);
         //        MAX
         if (board.board.getSideToMove() == Side.WHITE) {
-            value = Integer.MIN_VALUE;
+            bestMove.eval = Integer.MIN_VALUE;
             boolean firstMove = true;
             for (Move move : orderedMoves) {
-                if (!board.board.doMove(move, true)) {
-                    System.out.println("Error");
-                    System.exit(1);
-                }
+                board.board.doMove(move);
                 AlphaBeta ret;
                 if (firstMove) {
                     // First move: full window search
+                    firstMove = false;
                     ret = alphaBeta(board, depth - 1, move, alpha, beta);
                 } else {
                     // Other moves: null-window search
@@ -169,26 +166,25 @@ public class ChessAI {
                         ret = alphaBeta(board, depth - 1, move, alpha, beta);
                     }
                 }
-                firstMove = false;
                 board.board.undoMove();
-                int currentVal = ret.eval;
-                if (currentVal > value) {
-                    value = currentVal;
-                    bestMove = move;
+
+                if (ret.eval > bestMove.eval) {
+                    bestMove = new AlphaBeta(move, ret.eval);
                 }
-                alpha = Math.max(alpha, value);
-                if (value >= beta) {
+                alpha = Math.max(alpha, bestMove.eval);
+                if (bestMove.eval >= beta) {
                     break;
                 }
             }
 //        MIN
         } else {
-            value = Integer.MAX_VALUE;
+            bestMove.eval = Integer.MAX_VALUE;
             boolean firstMove = true;
             for (Move move : orderedMoves) {
                 board.board.doMove(move);
                 AlphaBeta ret;
                 if (firstMove) {
+                    firstMove = false;
                     ret = alphaBeta(board, depth - 1, move, alpha, beta);
                 } else {
                     ret = alphaBeta(board, depth - 1, move, beta - 1, beta);
@@ -197,31 +193,28 @@ public class ChessAI {
                         ret = alphaBeta(board, depth - 1, move, alpha, beta);
                     }
                 }
-                firstMove = false;
                 board.board.undoMove();
-                int currentVal = ret.eval;
-                if (currentVal < value) {
-                    value = currentVal;
-                    bestMove = move;
+                if (ret.eval < bestMove.eval) {
+                    bestMove = new AlphaBeta(move, ret.eval);
                 }
-                beta = Math.min(beta, value);
-                if (value <= alpha) {
+                beta = Math.min(beta, bestMove.eval);
+                if (bestMove.eval <= alpha) {
                     break;
                 }
             }
         }
         // Determine bound type for TT
         BoundType bound;
-        if (value <= originalAlpha) {
+        if (bestMove.eval <= originalAlpha) {
             bound = BoundType.UPPERBOUND;
-        } else if (value >= beta) {
+        } else if (bestMove.eval >= beta) {
             bound = BoundType.LOWERBOUND;
         } else {
             bound = BoundType.EXACT;
         }
         this.transpositionTable.put(zobristHash,
-                new TranspositionEntry(bestMove, value, depth, bound));
-        return new AlphaBeta(bestMove, value);
+                new TranspositionEntry(bestMove.move, bestMove.eval, depth, bound));
+        return bestMove;
     }
 
     public int evaluate(BoardWrapper board) {
