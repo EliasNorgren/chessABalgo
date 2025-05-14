@@ -84,7 +84,9 @@ public class ChessAI {
             System.out.println("Depth: " + startDepth
                     + " Eval: " + bestMove.eval + " Move: "
                     + bestMove.move + " Time: " + ((System.currentTimeMillis() - startTime) / 1000.0));
-
+            System.out.println("Line: " + bestMove.line.reversed().stream()
+                    .map(Move::toString)
+                    .collect(Collectors.joining(" ")) + "\n");
             if (bestMove.eval == Integer.MAX_VALUE - startDepth || bestMove.eval == Integer.MIN_VALUE + startDepth) {
                 break;
             }
@@ -97,9 +99,6 @@ public class ChessAI {
             bestMove.move = boardWrapper.board.legalMoves().getFirst();
             bestMove.eval = value * -1;
         }
-        System.out.println("\nLine: " + bestMove.line.reversed().stream()
-                .map(Move::toString)
-                .collect(Collectors.joining(" ")) + "\n");
 
         System.out.println("-------------------------------------------------------------");
         return new BestTurnInformation(bestMove, startDepth);
