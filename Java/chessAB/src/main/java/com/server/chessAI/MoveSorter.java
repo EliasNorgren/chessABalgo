@@ -19,70 +19,54 @@ public class MoveSorter {
         this.firstRecursion = firstRecursion;
     }
 
-    private class CheckComparator implements Comparator<Move> {
-
-        private final Board board;
-
-        public CheckComparator(Board board) {
-            this.board = board;
-        }
+    private record CheckComparator(Board board) implements Comparator<Move> {
 
         @Override
-        public int compare(Move o1, Move o2) {
+            public int compare(Move o1, Move o2) {
 
-            Side side = this.board.getSideToMove();
+                Side side = this.board.getSideToMove();
 
-            this.board.doMove(o1);
-            boolean o1CausedCheck = this.board.isKingAttacked();
-            this.board.undoMove();
+                this.board.doMove(o1);
+                boolean o1CausedCheck = this.board.isKingAttacked();
+                this.board.undoMove();
 
-            this.board.doMove(o2);
-            boolean o2CausedCheck = this.board.isKingAttacked();
-            this.board.undoMove();
+                this.board.doMove(o2);
+                boolean o2CausedCheck = this.board.isKingAttacked();
+                this.board.undoMove();
 
-            if (o1CausedCheck && !o2CausedCheck) {
-                return -1;
-            } else if (o2CausedCheck && !o1CausedCheck) {
-                return 1;
+                if (o1CausedCheck && !o2CausedCheck) {
+                    return -1;
+                } else if (o2CausedCheck && !o1CausedCheck) {
+                    return 1;
+                }
+                return 0;
             }
-            return 0;
         }
-    }
 
-    private class AttackComparator implements Comparator<Move> {
-
-        private final Board board;
-
-        public AttackComparator(Board board) {
-            this.board = board;
-        }
+    private record AttackComparator(Board board) implements Comparator<Move> {
 
         @Override
-        public int compare(Move o1, Move o2) {
+            public int compare(Move o1, Move o2) {
 
-            long enemyPieces = this.board.getBitboard(this.board.getSideToMove().flip());
-            boolean o1Attack = (o1.getTo().getBitboard() & enemyPieces) != 0L;
-            boolean o2Attack = (o2.getTo().getBitboard() & enemyPieces) != 0L;
+                long enemyPieces = this.board.getBitboard(this.board.getSideToMove().flip());
+                boolean o1Attack = (o1.getTo().getBitboard() & enemyPieces) != 0L;
+                boolean o2Attack = (o2.getTo().getBitboard() & enemyPieces) != 0L;
 
-            if (o1Attack && !o2Attack) {
-                return -1; // o1 is a capture, o2 is not
-            } else if (!o1Attack && o2Attack) {
-                return 1;
+                if (o1Attack && !o2Attack) {
+                    return -1; // o1 is a capture, o2 is not
+                } else if (!o1Attack && o2Attack) {
+                    return 1;
+                }
+                return 0;
             }
-            return 0;
         }
-    }
 
     public List<Move> sort() {
         List<Move> moves = this.board.legalMoves();
         moves.sort(new AttackComparator(this.board));
         moves.sort(new CheckComparator(this.board));
         if (this.firstRecursion && this.candidateMove != null) {
-            Move itemToBemovedFirst = this.candidateMove;
-            if(!moves.remove(itemToBemovedFirst)){
-                throw new RuntimeException("Move should be in list " + itemToBemovedFirst);
-            }
-            moves.add(0, itemToBemovedFirst);
+            moves.addFirst(this.candidateMove);
         }
         return moves;
     }

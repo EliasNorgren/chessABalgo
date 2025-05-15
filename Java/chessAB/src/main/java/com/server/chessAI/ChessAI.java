@@ -147,12 +147,23 @@ public class ChessAI {
             return new AlphaBeta(null, this.evaluator.evalPos(board), new Stack<>());
         }
 
-        List<Move> orderedMoves = new MoveSorter(board.board, candidateMove, depth == this.maxDepth).sort();
+//        List<Move> orderedMoves = new MoveSorter(board.board, candidateMove, depth == this.maxDepth).sort();
+        List<Move> checks = new ArrayList<>();
+        List<Move> attacks = new ArrayList<>();
+        List<Move> others = new ArrayList<>();
+        initMoveLists(board, checks, attacks, others);
+        if (this.maxDepth == depth && this.candidateMove != null) {
+            checks.addFirst(this.candidateMove);
+        }
+
         int originalAlpha = alpha;
         // TODO: Set value to alpha or beta??
         AlphaBeta bestMove = new AlphaBeta(null, 0, null);
         //        MAX
         if (board.board.getSideToMove() == Side.WHITE) {
+            List<Move> orderedMoves = new ArrayList<>(checks);
+            orderedMoves.addAll(attacks);
+            orderedMoves.addAll(others);
             bestMove.eval = Integer.MIN_VALUE;
             boolean firstMove = true;
             for (Move move : orderedMoves) {
@@ -183,6 +194,9 @@ public class ChessAI {
             }
 //        MIN
         } else {
+            List<Move> orderedMoves = new ArrayList<>(checks);
+            orderedMoves.addAll(attacks);
+            orderedMoves.addAll(others);
             bestMove.eval = Integer.MAX_VALUE;
             boolean firstMove = true;
             for (Move move : orderedMoves) {
@@ -221,6 +235,31 @@ public class ChessAI {
         this.transpositionTable.put(zobristHash,
                 new TranspositionEntry(bestMove.move, bestMove.eval, depth, bound, bestMove.line));
         return bestMove;
+    }
+
+    private void initMoveLists(BoardWrapper board, List<Move> checks, List<Move> attacks, List<Move> others) {
+        List<Move> allMoves = board.board.legalMoves();
+        for (Move move : allMoves) {
+            if (isCheck(move, board)) {
+                checks.add(move);
+            } else if (isAttack(move, board)){
+                attacks.add(move);
+            } else{
+                others.add(move);
+            }
+        }
+    }
+
+    private boolean isAttack(Move move, BoardWrapper board) {
+        long enemyPieces = board.board.getBitboard(board.board.getSideToMove().flip());
+        return (move.getTo().getBitboard() & enemyPieces) != 0L;
+    }
+
+    private boolean isCheck(Move move, BoardWrapper board) {
+        board.board.doMove(move);
+        boolean causedCheck = board.board.isKingAttacked();
+        board.board.undoMove();
+        return causedCheck;
     }
 
     public int evaluate(BoardWrapper board) {
