@@ -23,7 +23,7 @@ public class ChessAI {
     public AlphaBeta getBestMove(int depth, BoardWrapper board) {
         transpositionTable = new HashMap<>();
         this.maxDepth = depth;
-        return alphaBeta(board, depth, null, Integer.MIN_VALUE + depth, Integer.MAX_VALUE - depth);
+        return alphaBeta(board, depth, Integer.MIN_VALUE + depth, Integer.MAX_VALUE - depth);
     }
 
     public BestTurnInformation getBestMove(double max_time_seconds, List<String> moveStack) {
@@ -68,11 +68,11 @@ public class ChessAI {
             int alpha = Math.max(Integer.MIN_VALUE + startDepth, previousEval - aspirationWindow);
             int beta = Math.min(Integer.MAX_VALUE - startDepth, previousEval + aspirationWindow);
 
-            AlphaBeta bestMoveAtThisDepth = alphaBeta(boardWrapper.copy(), startDepth, null, alpha, beta);
+            AlphaBeta bestMoveAtThisDepth = alphaBeta(boardWrapper.copy(), startDepth,  alpha, beta);
 
             if (bestMoveAtThisDepth.eval <= alpha || bestMoveAtThisDepth.eval >= beta) {
                 // If evaluation was outside the window, re-search normally
-                bestMoveAtThisDepth = alphaBeta(boardWrapper.copy(), startDepth, null,
+                bestMoveAtThisDepth = alphaBeta(boardWrapper.copy(), startDepth,
                         Integer.MIN_VALUE + startDepth, Integer.MAX_VALUE - startDepth);
             }
 
@@ -110,7 +110,7 @@ public class ChessAI {
     }
 
 
-    private AlphaBeta alphaBeta(BoardWrapper board, int depth, Move prevMove, int alpha, int beta) {
+    private AlphaBeta alphaBeta(BoardWrapper board, int depth, int alpha, int beta) {
         long zobristHash = board.board.getZobristKey();
         TranspositionEntry entry = this.transpositionTable.get(zobristHash);
 
@@ -131,23 +131,23 @@ public class ChessAI {
         }
 
         if (board.board.isDraw()) {
-            return new AlphaBeta(prevMove, 0, new Stack<>());
+            return new AlphaBeta(null, 0, new Stack<>());
         }
 
         if (board.board.isMated()) {
             int currentDepth = this.maxDepth - depth;
             if (board.board.getSideToMove() == Side.BLACK) {
-                return new AlphaBeta(prevMove, Integer.MAX_VALUE - currentDepth, new Stack<>());
+                return new AlphaBeta(null, Integer.MAX_VALUE - currentDepth, new Stack<>());
             } else {
-                return new AlphaBeta(prevMove, Integer.MIN_VALUE + currentDepth, new Stack<>());
+                return new AlphaBeta(null, Integer.MIN_VALUE + currentDepth, new Stack<>());
             }
         }
 
         if (depth == 0) {
-            return new AlphaBeta(prevMove, this.evaluator.evalPos(board), new Stack<>());
+            return new AlphaBeta(null, this.evaluator.evalPos(board), new Stack<>());
         }
 
-        List<Move> orderedMoves = new MoveSorter(board.board, candidateMove, prevMove == null).sort();
+        List<Move> orderedMoves = new MoveSorter(board.board, candidateMove, depth == this.maxDepth).sort();
         int originalAlpha = alpha;
         // TODO: Set value to alpha or beta??
         AlphaBeta bestMove = new AlphaBeta(null, 0, null);
@@ -161,14 +161,14 @@ public class ChessAI {
                 if (firstMove) {
                     // First move: full window search
                     firstMove = false;
-                    ret = alphaBeta(board, depth - 1, move, alpha, beta);
+                    ret = alphaBeta(board, depth - 1, alpha, beta);
                 } else {
                     // Other moves: null-window search
-                    ret = alphaBeta(board, depth - 1, move, alpha, alpha + 1);
+                    ret = alphaBeta(board, depth - 1, alpha, alpha + 1);
                     int score = ret.eval;
                     if (score > alpha && score < beta) {
                         // Re-search with full window if null window failed
-                        ret = alphaBeta(board, depth - 1, move, alpha, beta);
+                        ret = alphaBeta(board, depth - 1, alpha, beta);
                     }
                 }
                 board.board.undoMove();
@@ -190,12 +190,12 @@ public class ChessAI {
                 AlphaBeta ret;
                 if (firstMove) {
                     firstMove = false;
-                    ret = alphaBeta(board, depth - 1, move, alpha, beta);
+                    ret = alphaBeta(board, depth - 1, alpha, beta);
                 } else {
-                    ret = alphaBeta(board, depth - 1, move, beta - 1, beta);
+                    ret = alphaBeta(board, depth - 1,beta - 1, beta);
                     int score = ret.eval;
                     if (score < beta && score > alpha) {
-                        ret = alphaBeta(board, depth - 1, move, alpha, beta);
+                        ret = alphaBeta(board, depth - 1, alpha, beta);
                     }
                 }
                 board.board.undoMove();
