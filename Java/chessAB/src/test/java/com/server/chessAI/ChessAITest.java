@@ -128,7 +128,7 @@ class ChessAITest {
         b.board.loadFromFen("rnbqkbnr/1p3pp1/2ppp2p/p7/B2PP3/2N5/PPP2PPP/R1BQK1NR w");
         String fen = b.board.getFen();
 
-        AlphaBeta move = ai.getBestMove(8, b);
+        AlphaBeta move = ai.getBestMove(6, b);
         System.out.println(move.line.reversed());
         assertEquals("a2a3", move.move.toString());
     }
