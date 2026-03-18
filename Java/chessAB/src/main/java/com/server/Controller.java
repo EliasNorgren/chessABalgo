@@ -55,49 +55,49 @@ public class Controller {
                 runningThread.getSemaphore().acquire();
                 currentBest = runningThread.getBestMoveInfo();
             }
-
+            System.out.println("------------     PONDER HIT    ------------");
             ret = currentBest;
             runningThread.stopThread();
         }
+        Move bestMove = ret.bestMove.move;
+        GetBestMoveResponse response = new GetBestMoveResponse();
 
         // -------------------------
         // Start next ponder thread
         // -------------------------
+        if (ret.bestMove.line.size() >= 2){
+            Move ponderMove = ret.bestMove.line.reversed().get(1);
 
-        Move bestMove = ret.bestMove.move;
-        Move ponderMove = ret.bestMove.line.reversed().get(1);
-
-        Board nextBoard = new Board();
-        for (String move : moveStack) {
-            nextBoard.doMove(move);
-        }
-
-        nextBoard.doMove(bestMove);
-        nextBoard.doMove(ponderMove);
-
-        long nextHash = nextBoard.getZobristKey();
-
-        PonderThread newThread = new PonderThread(nextBoard);
-
-        newThread.exitRunner = () -> {
-            if (currentThread == newThread) {
-                currentThread = null;
+            Board nextBoard = new Board();
+            for (String move : moveStack) {
+                nextBoard.doMove(move);
             }
-        };
 
-        currentThread = newThread;
-        currentHash = nextHash;
+            nextBoard.doMove(bestMove);
+            nextBoard.doMove(ponderMove);
 
-        newThread.start();
+            long nextHash = nextBoard.getZobristKey();
 
+            PonderThread newThread = new PonderThread(nextBoard);
+
+            newThread.exitRunner = () -> {
+                if (currentThread == newThread) {
+                    currentThread = null;
+                }
+            };
+
+            currentThread = newThread;
+            currentHash = nextHash;
+            response.setPonderMove(ponderMove.toString());
+
+            newThread.start();
+        }
         // -------------------------
 
-        GetBestMoveResponse response = new GetBestMoveResponse();
         response.setBestMove(bestMove.toString());
         response.setTimeTaken(System.currentTimeMillis() - start);
         response.setEval(ret.bestMove.eval);
         response.setDepth(ret.depth);
-        response.setPonderMove(ponderMove.toString());
 
         return response;
     }
