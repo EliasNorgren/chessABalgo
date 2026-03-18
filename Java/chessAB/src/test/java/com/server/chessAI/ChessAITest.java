@@ -181,6 +181,14 @@ class ChessAITest {
 
     }
 
+    @Test
+    public void maybeLookOneMoreMoveAndDontSacQueenTest(){
+        BoardWrapper board = generateBoardFromMoves("Nf3 e6 b3 Qf6 Nc3 Nc6 Bb2 Bd6 e4 Nge7 d4 Bb4 e5 Qf5 Bd3 Qg4 O-O Nxd4 Nxd4 Qxd4 Na4 Qf4 c3 Ba5 b4");
+        ChessAI ai = new ChessAI();
+        AlphaBeta move = ai.getBestMove(7, board);
+        assertNotEquals("f4e5", move.move.toString());
+    }
+
 //    @Test dontMoveQueenEarlyPlz() {
 //        String moveStack = "e4 d6 Nc3 g6";
 //        Board b = generateBoardFromMoves(moveStack);
