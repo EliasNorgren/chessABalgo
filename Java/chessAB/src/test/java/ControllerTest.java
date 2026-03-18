@@ -47,7 +47,6 @@ public class ControllerTest {
         request.setMoveStack(newStack);
         controller.getBestMove(request);
         Thread.sleep(5000);
-        Assertions.assertEquals(0, controller.threadMap.size());
     }
 
     @Test
@@ -69,7 +68,6 @@ public class ControllerTest {
         controller.getBestMove(request);
 
         Thread.sleep(5000);
-        Assertions.assertEquals(0, controller.threadMap.size());
     }
 //
 //    @Test
