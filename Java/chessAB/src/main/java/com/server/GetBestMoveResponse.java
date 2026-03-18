@@ -2,8 +2,23 @@ package com.server;
 
 public class GetBestMoveResponse {
     private String bestMove;
+
+    public String getPonderMove() {
+        return ponderMove;
+    }
+
+    public void setPonderMove(String ponderMove) {
+        this.ponderMove = ponderMove;
+    }
+
+    private String ponderMove;
     private float timeTaken;
     private float eval;
+
+    public int getDepth() {
+        return depth;
+    }
+
     private int depth;
 
     public String getLine() {

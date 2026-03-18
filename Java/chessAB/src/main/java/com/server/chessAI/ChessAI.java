@@ -2,11 +2,12 @@ package com.server.chessAI;
 
 import com.github.bhlangonijr.chesslib.*;
 import com.github.bhlangonijr.chesslib.move.Move;
-import com.server.chessAI.InternalEval.MyEval;
 import com.server.chessAI.TranspositionEntry.BoundType;
 import com.server.externalEval.cuckoochess.Evaluate;
 
 import java.util.*;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.stream.Collectors;
 
 public class ChessAI {
@@ -15,10 +16,10 @@ public class ChessAI {
     private Map<Long, TranspositionEntry> transpositionTable;
     private Move candidateMove;
     private final Evaluator evaluator = new Evaluate();
-
-//    public ChessAI(Evaluator evaluator) {
-//        this.evaluator = evaluator;
-//    }
+    public boolean ponderThreadShouldRun = true;
+    public BestTurnInformation ponderInfo;
+    public ReentrantReadWriteLock ponderInfoLock = new ReentrantReadWriteLock();
+    public Semaphore semaphore;
 
     public AlphaBeta getBestMove(int depth, BoardWrapper board) {
         transpositionTable = new HashMap<>();
@@ -26,19 +27,8 @@ public class ChessAI {
         return alphaBeta(board, depth, Integer.MIN_VALUE + depth, Integer.MAX_VALUE - depth);
     }
 
-    public BestTurnInformation getBestMove(double max_time_seconds, List<String> moveStack) {
+    public BestTurnInformation getBestMove(BoardWrapper boardWrapper, double max_time_seconds, boolean isPonderThread) {
         System.out.println("Max time " + max_time_seconds);
-        transpositionTable = new HashMap<>();
-        BoardWrapper board = new BoardWrapper();
-        for (String move : moveStack) {
-            board.board.doMove(move);
-        }
-        System.out.println("Pushed board into FEN: " + board.board.getFen());
-
-        return this.getBestMove(board, max_time_seconds);
-    }
-
-    public BestTurnInformation getBestMove(BoardWrapper boardWrapper, double max_time_seconds) {
         transpositionTable = new HashMap<>();
         CastleRight whiteCastleRight = boardWrapper.board.getCastleRight(Side.WHITE);
         CastleRight blackCastleRight = boardWrapper.board.getCastleRight(Side.BLACK);
@@ -80,26 +70,36 @@ public class ChessAI {
             previousEval = bestMove.eval;
 
             this.candidateMove = bestMove.move;
-
+            double timeElapsed = ((System.currentTimeMillis() - startTime) / 1000.0);
             System.out.println("Depth: " + startDepth
                     + " Eval: " + bestMove.eval + " Move: "
-                    + bestMove.move + " Time: " + ((System.currentTimeMillis() - startTime) / 1000.0));
+                    + bestMove.move + " Time: " + timeElapsed);
             System.out.println("Line: " + bestMove.line.reversed().stream()
                     .map(Move::toString)
                     .collect(Collectors.joining(" ")) + "\n");
             if (bestMove.eval == Integer.MAX_VALUE - startDepth || bestMove.eval == Integer.MIN_VALUE + startDepth) {
                 break;
             }
+            if (isPonderThread){
+                this.ponderInfoLock.writeLock().lock();
+                this.ponderInfo = new BestTurnInformation(bestMove, startDepth);
+                this.ponderInfo.timeElapsed = timeElapsed;
+                this.ponderInfoLock.writeLock().unlock();
+                this.semaphore.drainPermits();
+                this.semaphore.release();
 
+                if (!this.ponderThreadShouldRun){
+                    break;
+                }
+            }
             startDepth++;
-//        } while(true);
-        } while (System.currentTimeMillis() - startTime <= (max_time_seconds * 1000));
+        } while (System.currentTimeMillis() - startTime <= (max_time_seconds * 1000) ||
+                (isPonderThread && this.ponderThreadShouldRun));
         if (bestMove.move == null) {
             System.out.println("AI did not find move, picking first");
             bestMove.move = boardWrapper.board.legalMoves().getFirst();
             bestMove.eval = value * -1;
         }
-
         System.out.println("-------------------------------------------------------------");
         return new BestTurnInformation(bestMove, startDepth);
     }
@@ -111,6 +111,10 @@ public class ChessAI {
 
 
     private AlphaBeta alphaBeta(BoardWrapper board, int depth, int alpha, int beta) {
+        if (!ponderThreadShouldRun) {
+            return new AlphaBeta(null, 0, new Stack<>());
+        }
+
         long zobristHash = board.board.getZobristKey();
         TranspositionEntry entry = this.transpositionTable.get(zobristHash);
 
@@ -147,7 +151,6 @@ public class ChessAI {
             return new AlphaBeta(null, this.evaluator.evalPos(board), new Stack<>());
         }
 
-//        List<Move> orderedMoves = new MoveSorter(board.board, candidateMove, depth == this.maxDepth).sort();
         List<Move> checks = new ArrayList<>();
         List<Move> attacks = new ArrayList<>();
         List<Move> others = new ArrayList<>();
@@ -159,11 +162,13 @@ public class ChessAI {
         int originalAlpha = alpha;
         // TODO: Set value to alpha or beta??
         AlphaBeta bestMove = new AlphaBeta(null, 0, null);
+
+        List<Move> orderedMoves = new ArrayList<>(checks);
+        orderedMoves.addAll(attacks);
+        orderedMoves.addAll(others);
+
         //        MAX
         if (board.board.getSideToMove() == Side.WHITE) {
-            List<Move> orderedMoves = new ArrayList<>(checks);
-            orderedMoves.addAll(attacks);
-            orderedMoves.addAll(others);
             bestMove.eval = Integer.MIN_VALUE;
             boolean firstMove = true;
             for (Move move : orderedMoves) {
@@ -194,9 +199,6 @@ public class ChessAI {
             }
 //        MIN
         } else {
-            List<Move> orderedMoves = new ArrayList<>(checks);
-            orderedMoves.addAll(attacks);
-            orderedMoves.addAll(others);
             bestMove.eval = Integer.MAX_VALUE;
             boolean firstMove = true;
             for (Move move : orderedMoves) {

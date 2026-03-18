@@ -52,7 +52,7 @@ class ChessAITest {
 
         b = new BoardWrapper();
         b.board.loadFromFen("8/8/8/2k5/7R/6R1/8/7K w - - 0 1");
-        BestTurnInformation ret = ai.getBestMove(b, 10);
+        BestTurnInformation ret = ai.getBestMove(b, 10, false);
         assertEquals("g3g5", ret.bestMove.move.toString());
         assertEquals(Integer.MAX_VALUE - 9, ret.bestMove.eval);
 
@@ -63,7 +63,7 @@ class ChessAITest {
         BoardWrapper b = new BoardWrapper();
         b.board.loadFromFen("3R2n1/k1r2p2/pp3n2/4Q3/2b5/4BBNP/PP3PP1/4K2R w K - 0 29");
         ChessAI ai = new ChessAI();
-        BestTurnInformation ret = ai.getBestMove( b, 3);
+        BestTurnInformation ret = ai.getBestMove( b, 3, false);
         System.out.println(ret.bestMove.move);
 
     }
@@ -103,7 +103,7 @@ class ChessAITest {
         ChessAI ai = new ChessAI();
         BoardWrapper b = new BoardWrapper();
         b.board.loadFromFen("K7/5r2/1k6/8/8/8/8/8 b - - 0 1");
-        BestTurnInformation ret = ai.getBestMove(b, 5);
+        BestTurnInformation ret = ai.getBestMove(b, 5, false);
         assertTrue(ret.depth == 1);
     }
 
@@ -175,7 +175,7 @@ class ChessAITest {
 
         board = new BoardWrapper();
         board.board.loadFromFen("2QQQ3/6k1/8/5B2/8/8/5PPP/q5K1 w - - 1 2");
-        BestTurnInformation returned = ai.getBestMove(board, 60);
+        BestTurnInformation returned = ai.getBestMove(board, 60, false);
         assertEquals("f5b1", returned.bestMove.move.toString());
         assertEquals(Integer.MIN_VALUE + 8, returned.bestMove.eval);
 
