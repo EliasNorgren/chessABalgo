@@ -4,11 +4,14 @@ import com.github.bhlangonijr.chesslib.*;
 import com.github.bhlangonijr.chesslib.move.Move;
 import com.server.chessAI.TranspositionEntry.BoundType;
 import com.server.externalEval.cuckoochess.Evaluate;
+import org.springframework.web.server.adapter.AbstractReactiveWebInitializer;
 
 import java.util.*;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.stream.Collectors;
+
+import static com.github.bhlangonijr.chesslib.PieceType.*;
 
 public class ChessAI {
 
@@ -163,16 +166,19 @@ public class ChessAI {
         }
 
         List<Move> checks = new ArrayList<>();
-        List<Move> attacks = new ArrayList<>();
+        List<Move> captures = new ArrayList<>();
         List<Move> others = new ArrayList<>();
-        initMoveLists(board, checks, attacks, others);
+        List<Move> attacks = new ArrayList<>();
+        initMoveLists(board, checks, captures, attacks, others);
         if (this.maxDepth == depth && this.candidateMove != null) {
             if (checks.contains(this.candidateMove)) {
                 checks.remove(this.candidateMove);
-            } else if (attacks.contains(this.candidateMove)) {
-                attacks.remove(this.candidateMove);
+            } else if (captures.contains(this.candidateMove)) {
+                captures.remove(this.candidateMove);
             } else if (others.contains(this.candidateMove)) {
                 others.remove(this.candidateMove);
+            }else if(captures.contains(this.candidateMove)){
+                captures.remove(this.candidateMove);
             }
             checks.addFirst(this.candidateMove);
         }
@@ -182,6 +188,7 @@ public class ChessAI {
         AlphaBeta bestMove = new AlphaBeta(null, 0, null);
 
         List<Move> orderedMoves = new ArrayList<>(checks);
+        orderedMoves.addAll(captures);
         orderedMoves.addAll(attacks);
         orderedMoves.addAll(others);
 
@@ -257,22 +264,45 @@ public class ChessAI {
         return bestMove;
     }
 
-    private void initMoveLists(BoardWrapper board, List<Move> checks, List<Move> attacks, List<Move> others) {
+    private void initMoveLists(BoardWrapper board, List<Move> checks, List<Move> captures, List<Move> attacks, List<Move> others) {
         List<Move> allMoves = board.board.legalMoves();
         for (Move move : allMoves) {
             if (isCheck(move, board)) {
                 checks.add(move);
+            } else if (isCapture(move, board)){
+                captures.add(move);
             } else if (isAttack(move, board)){
                 attacks.add(move);
-            } else{
+            }
+            else{
                 others.add(move);
             }
         }
     }
 
-    private boolean isAttack(Move move, BoardWrapper board) {
+    private boolean isCapture(Move move, BoardWrapper board) {
         long enemyPieces = board.board.getBitboard(board.board.getSideToMove().flip());
         return (move.getTo().getBitboard() & enemyPieces) != 0L;
+    }
+
+    private boolean isAttack(Move move, BoardWrapper board) {
+        Side enemy = board.board.getSideToMove().flip(); // save before doMove flips it
+        board.board.doMove(move);
+        long enemyPieces = board.board.getBitboard(enemy);
+        boolean result = false;
+        long remaining = enemyPieces;
+        while (remaining != 0L) {
+            Square enemySquare = Square.squareAt(Long.numberOfTrailingZeros(remaining));
+            // squareAttackedBy(sq, side) returns squares FROM WHICH side's pieces attack sq
+            // If move.getTo() is in that set, our moved piece attacks this enemy square
+            if ((board.board.squareAttackedBy(enemySquare, enemy.flip()) & move.getTo().getBitboard()) != 0L) {
+                result = true;
+                break;
+            }
+            remaining &= remaining - 1;
+        }
+        board.board.undoMove();
+        return result;
     }
 
     private boolean isCheck(Move move, BoardWrapper board) {
