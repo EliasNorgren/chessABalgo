@@ -6,7 +6,6 @@ import com.server.externalEval.cuckoochess.BitBoard;
 import com.server.externalEval.cuckoochess.Evaluate;
 import com.server.externalEval.cuckoochess.IPosition;
 
-import java.security.SecureRandom;
 import java.util.EnumMap;
 import java.util.Map;
 import java.util.Random;
@@ -54,7 +53,7 @@ public class BoardWrapper implements IPosition {
             pieceToPIDTable.put(PIDToPieceTable[i], i);
         }
 
-        Random rng = new SecureRandom(); // or new Random(seed) for reproducibility
+        Random rng = new Random(42); // fixed seed for deterministic Zobrist values
         for (int i = 0; i < 64; i++) {
             ZOBRIST_WHITE_PAWNS[i] = rng.nextLong();
             ZOBRIST_BLACK_PAWNS[i] = rng.nextLong();

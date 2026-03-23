@@ -20,16 +20,25 @@ public class ChessAI {
     public BestTurnInformation ponderInfo;
     public ReentrantReadWriteLock ponderInfoLock = new ReentrantReadWriteLock();
     public Semaphore semaphore;
+    private boolean isPonderThread = false;
+
+    private long nodeCount = 0;
+
+    public long getNodeCount() { return nodeCount; }
+    public void resetNodeCount() { nodeCount = 0; }
 
     public AlphaBeta getBestMove(int depth, BoardWrapper board) {
         transpositionTable = new HashMap<>();
         this.maxDepth = depth;
+        nodeCount = 0;
         return alphaBeta(board, depth, Integer.MIN_VALUE + depth, Integer.MAX_VALUE - depth);
     }
 
     public BestTurnInformation getBestMove(BoardWrapper boardWrapper, double max_time_seconds, boolean isPonderThread) {
+        this.isPonderThread = isPonderThread;
         System.out.println("Max time " + max_time_seconds);
         transpositionTable = new HashMap<>();
+        nodeCount = 0;
         CastleRight whiteCastleRight = boardWrapper.board.getCastleRight(Side.WHITE);
         CastleRight blackCastleRight = boardWrapper.board.getCastleRight(Side.BLACK);
         System.out.println("White castle: " + whiteCastleRight);
@@ -111,7 +120,9 @@ public class ChessAI {
 
 
     private AlphaBeta alphaBeta(BoardWrapper board, int depth, int alpha, int beta) {
-        if (!ponderThreadShouldRun) {
+        nodeCount++;
+
+        if (!ponderThreadShouldRun && isPonderThread) {
             return new AlphaBeta(null, 0, new Stack<>());
         }
 
@@ -156,6 +167,13 @@ public class ChessAI {
         List<Move> others = new ArrayList<>();
         initMoveLists(board, checks, attacks, others);
         if (this.maxDepth == depth && this.candidateMove != null) {
+            if (checks.contains(this.candidateMove)) {
+                checks.remove(this.candidateMove);
+            } else if (attacks.contains(this.candidateMove)) {
+                attacks.remove(this.candidateMove);
+            } else if (others.contains(this.candidateMove)) {
+                others.remove(this.candidateMove);
+            }
             checks.addFirst(this.candidateMove);
         }
 
