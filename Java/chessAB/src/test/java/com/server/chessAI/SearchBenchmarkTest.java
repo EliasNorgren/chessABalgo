@@ -141,9 +141,12 @@ public class SearchBenchmarkTest {
         System.out.println("-".repeat(100));
 
         long totalNodes = 0;
+        long totalExpectedNodes = 0;
+        long totalActualNodesForExpected = 0;
         long totalMs = 0;
         int correct = 0;
         int nodeRegressions = 0;
+        int positionsWithExpected = 0;
 
         for (EdpRecord rec : records) {
             ChessAI ai = new ChessAI();
@@ -169,6 +172,9 @@ public class SearchBenchmarkTest {
                 double delta = 100.0 * (nodes - rec.expectedNodes()) / rec.expectedNodes();
                 deltaStr = String.format("%+.1f%%", delta);
                 if (delta > 3 || delta < -3) nodeRegressions++;
+                totalExpectedNodes += rec.expectedNodes();
+                totalActualNodesForExpected += nodes;
+                positionsWithExpected++;
             }
 
             System.out.printf("%-8s  %5d  %-7s  %,12d  %12s  %8s  %-8s  %-10s  (%dms)%n",
@@ -184,12 +190,21 @@ public class SearchBenchmarkTest {
         boolean hadNodeRegressions = false;
         if (nodeRegressions > 0){
             hadNodeRegressions = true;
-            System.out.printf("  *** %d node regression(s) >5%% ***", nodeRegressions);
+            System.out.printf("  *** %d node regression(s) >3%% ***", nodeRegressions);
+        }
+        boolean hadAvgRegression = false;
+        if (positionsWithExpected > 0) {
+            double avgDelta = 100.0 * (totalActualNodesForExpected - totalExpectedNodes) / totalExpectedNodes;
+            System.out.printf("  avg-delta=%+.1f%%", avgDelta);
+            if (avgDelta > 3) {
+                hadAvgRegression = true;
+                System.out.printf("  *** avg node regression >3%% ***");
+            }
         }
         System.out.println();
         System.out.println("=".repeat(100));
         boolean allMovesCorrect = correct == records.size();
-        boolean success = !hadNodeRegressions && allMovesCorrect;
+        boolean success = !hadNodeRegressions && !hadAvgRegression && allMovesCorrect;
         Assertions.assertTrue(success);
     }
 

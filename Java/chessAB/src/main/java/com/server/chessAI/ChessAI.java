@@ -278,6 +278,24 @@ public class ChessAI {
                 others.add(move);
             }
         }
+        sortCaptures(captures, board);
+    }
+
+    private void sortCaptures(List<Move> captures, BoardWrapper board) {
+        captures.sort((move1, move2) -> {
+            int move1FromVal = board.getValueForSquare(move1.getFrom());
+            int move1ToVal = board.getValueForSquare(move1.getTo());
+
+            int move2FromVal = board.getValueForSquare(move2.getFrom());
+            int move2ToVal = board.getValueForSquare(move2.getTo());
+
+            int move1value = move1ToVal - move1FromVal;
+            int move2value = move2ToVal - move2FromVal;
+            if (move1value > move2value) {
+                return -1;
+            }
+            return 1;
+        });
     }
 
     private boolean isCapture(Move move, BoardWrapper board) {

@@ -234,4 +234,31 @@ public class BoardWrapper implements IPosition {
         return new BoardWrapper(this.board.clone());
     }
 
+    public int getValueForSquare(Square sq) {
+        PieceType p = this.board.getPiece(sq).getPieceType();
+        switch (p) {
+            case KING -> {
+                return 220;
+            }
+            case QUEEN -> {
+                return 790;
+            }
+            case ROOK -> {
+                return 500;
+            }
+            case BISHOP -> {
+                return 350;
+            }
+            case KNIGHT -> {
+                return 310;
+            }
+            case NONE -> {
+                return 0;
+            }
+            case PAWN -> {
+                return 100;
+            }
+        }
+        return 0;
+    }
 }
