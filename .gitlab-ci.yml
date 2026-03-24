@@ -1,21 +1,25 @@
 stages:
   - build
 
+variables:
+  # Tag images with GitLab registry hostname, no :80
+  IMAGE_TAG: registry.eliashouse.ddns.net/root/chessabalgo:$CI_COMMIT_REF_SLUG
+
 build-image:
   stage: build
   image: docker:latest
 
   services:
     - name: docker:dind
+      # Tell Docker-in-Docker that this registry is HTTP
       command: ["--insecure-registry=registry.eliashouse.ddns.net"]
 
-  variables:
-    IMAGE_TAG: registry.eliashouse.ddns.net/root/chessabalgo:$CI_COMMIT_REF_SLUG
-
   before_script:
+    # Login to GitLab registry over HTTP
     - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin registry.eliashouse.ddns.net
 
   script:
+    # Build and push image
     - docker build -t "$IMAGE_TAG" Java/chessAB/
     - docker push "$IMAGE_TAG"
 
