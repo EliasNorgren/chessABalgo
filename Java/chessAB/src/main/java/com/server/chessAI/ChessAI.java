@@ -278,24 +278,83 @@ public class ChessAI {
                 others.add(move);
             }
         }
-        sortCaptures(captures, board);
+        if (captures.size() > 1) {
+            sortCaptures(captures, board);
+        }
+        if (attacks.size() > 1) {
+            sortAttacks(attacks, board);
+        }
+    }
+
+    public void printMoveOrder(BoardWrapper board) {
+        List<Move> checks = new ArrayList<>(), captures = new ArrayList<>(),
+                   attacks = new ArrayList<>(), others = new ArrayList<>();
+        initMoveLists(board, checks, captures, attacks, others);
+
+        System.out.println("--- CHECKS (" + checks.size() + ") ---");
+        for (Move m : checks) System.out.printf("  %s%n", m);
+
+        System.out.println("--- CAPTURES (" + captures.size() + ") score=toVal-fromVal[-fromVal if defended cheaper] ---");
+        for (Move m : captures) System.out.printf("  %-8s  score=%d%n", m, captureScore(m, board));
+
+        System.out.println("--- ATTACKS (" + attacks.size() + ") score=sumAttacked[-movingVal if defended cheaper] ---");
+        for (Move m : attacks) System.out.printf("  %-8s  score=%d%n", m, attackScore(m, board));
+
+        System.out.println("--- OTHERS (" + others.size() + ") ---");
+        for (Move m : others) System.out.printf("  %s%n", m);
     }
 
     private void sortCaptures(List<Move> captures, BoardWrapper board) {
-        captures.sort((move1, move2) -> {
-            int move1FromVal = board.getValueForSquare(move1.getFrom());
-            int move1ToVal = board.getValueForSquare(move1.getTo());
+        captures.sort((move1, move2) -> Integer.compare(captureScore(move2, board), captureScore(move1, board)));
+    }
 
-            int move2FromVal = board.getValueForSquare(move2.getFrom());
-            int move2ToVal = board.getValueForSquare(move2.getTo());
-
-            int move1value = move1ToVal - move1FromVal;
-            int move2value = move2ToVal - move2FromVal;
-            if (move1value > move2value) {
-                return -1;
+    private int captureScore(Move move, BoardWrapper board) {
+        int fromVal = board.getValueForSquare(move.getFrom());
+        int toVal = board.getValueForSquare(move.getTo());
+        int score = toVal - fromVal;
+        board.board.doMove(move);
+        long recapturers = board.board.squareAttackedBy(move.getTo(), board.board.getSideToMove());
+        while (recapturers != 0L) {
+            Square sq = Square.squareAt(Long.numberOfTrailingZeros(recapturers));
+            if (board.getValueForSquare(sq) < fromVal) {
+                score -= fromVal;
+                break;
             }
-            return 1;
-        });
+            recapturers &= recapturers - 1;
+        }
+        board.board.undoMove();
+        return score;
+    }
+
+    private void sortAttacks(List<Move> attacks, BoardWrapper board) {
+        attacks.sort((move1, move2) -> Integer.compare(attackScore(move2, board), attackScore(move1, board)));
+    }
+
+    private int attackScore(Move move, BoardWrapper board) {
+        int movingPieceValue = board.getValueForSquare(move.getFrom());
+        Side enemy = board.board.getSideToMove().flip();
+        board.board.doMove(move);
+        long enemyPieces = board.board.getBitboard(enemy);
+        int score = 0;
+        long remaining = enemyPieces;
+        while (remaining != 0L) {
+            Square enemySquare = Square.squareAt(Long.numberOfTrailingZeros(remaining));
+            if ((board.board.squareAttackedBy(enemySquare, enemy.flip()) & move.getTo().getBitboard()) != 0L) {
+                score += board.getValueForSquare(enemySquare);
+            }
+            remaining &= remaining - 1;
+        }
+        long recapturers = board.board.squareAttackedBy(move.getTo(), board.board.getSideToMove());
+        while (recapturers != 0L) {
+            Square sq = Square.squareAt(Long.numberOfTrailingZeros(recapturers));
+            if (board.getValueForSquare(sq) < movingPieceValue) {
+                score -= movingPieceValue;
+                break;
+            }
+            recapturers &= recapturers - 1;
+        }
+        board.board.undoMove();
+        return score;
     }
 
     private boolean isCapture(Move move, BoardWrapper board) {

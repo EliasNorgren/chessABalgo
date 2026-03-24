@@ -247,4 +247,35 @@ public class SearchBenchmarkTest {
         System.out.println("=".repeat(70));
         System.out.println("Lower ratio = better pruning (ideal alpha-beta ~sqrt(N) of minimax)");
     }
+
+    /**
+     * Debug test: print the scored move ordering for BK.21 at the root, then
+     * show node counts at each depth so you can see where the explosion happens.
+     */
+    @Test
+    public void debugBK21() throws Exception {
+        String fen = "3rn2k/ppb2rpp/2ppqp2/5N2/2P1P3/1P5Q/PB3PPP/3RR1K1 w - - 0 1";
+
+        System.out.println("=".repeat(70));
+        System.out.println("DEBUG: BK.21  —  root move ordering");
+        System.out.println("FEN: " + fen);
+        System.out.println("=".repeat(70));
+        BoardWrapper board = new BoardWrapper();
+        board.board.loadFromFen(fen);
+        ChessAI ai = new ChessAI();
+        ai.ponderThreadShouldRun = false;
+        ai.printMoveOrder(board);
+
+        System.out.println();
+        System.out.println("--- NODE COUNT PER DEPTH ---");
+        for (int depth = 1; depth <= 6; depth++) {
+            BoardWrapper b = new BoardWrapper();
+            b.board.loadFromFen(fen);
+            ChessAI a = new ChessAI();
+            a.ponderThreadShouldRun = false;
+            AlphaBeta result = a.getBestMove(depth, b);
+            System.out.printf("  depth=%d  nodes=%,d  move=%s%n", depth, a.getNodeCount(), result.move);
+        }
+        System.out.println("=".repeat(70));
+    }
 }
