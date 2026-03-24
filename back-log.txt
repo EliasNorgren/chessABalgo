@@ -1,5 +1,0 @@
-stepping back and forward moves
-look over heuristic
-sortera attack listan beroende på pjäsens värde 
-multi threading
-ladda in end game moves
