@@ -7,13 +7,13 @@ build-image:
 
   services:
     - name: docker:dind
-      command: ["--insecure-registry=registry.eliashouse.ddns.net:80"]
+      command: ["--insecure-registry=registry.eliashouse.ddns.net"]
 
   variables:
-    IMAGE_TAG: registry.eliashouse.ddns.net:80/root/chessabalgo:$CI_COMMIT_REF_SLUG
+    IMAGE_TAG: registry.eliashouse.ddns.net/root/chessabalgo:$CI_COMMIT_REF_SLUG
 
   before_script:
-    - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin registry.eliashouse.ddns.net:80
+    - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin registry.eliashouse.ddns.net
 
   script:
     - docker build -t "$IMAGE_TAG" Java/chessAB/
