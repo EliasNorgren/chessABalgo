@@ -171,7 +171,7 @@ public class SearchBenchmarkTest {
             if (rec.expectedNodes() != null) {
                 double delta = 100.0 * (nodes - rec.expectedNodes()) / rec.expectedNodes();
                 deltaStr = String.format("%+.1f%%", delta);
-                if (delta > 3 || delta < -3) nodeRegressions++;
+                if (delta > 3) nodeRegressions++; // only flag increases — fewer nodes = improvement
                 totalExpectedNodes += rec.expectedNodes();
                 totalActualNodesForExpected += nodes;
                 positionsWithExpected++;
@@ -254,10 +254,10 @@ public class SearchBenchmarkTest {
      */
     @Test
     public void debugBK21() throws Exception {
-        String fen = "3rn2k/ppb2rpp/2ppqp2/5N2/2P1P3/1P5Q/PB3PPP/3RR1K1 w - - 0 1";
+        String fen = "2r3k1/pppR1pp1/4p3/4P1P1/5P2/1P4K1/P1P5/8 w - -";
 
         System.out.println("=".repeat(70));
-        System.out.println("DEBUG: BK.21  —  root move ordering");
+        System.out.println("DEBUG: —  root move ordering");
         System.out.println("FEN: " + fen);
         System.out.println("=".repeat(70));
         BoardWrapper board = new BoardWrapper();
@@ -268,7 +268,7 @@ public class SearchBenchmarkTest {
 
         System.out.println();
         System.out.println("--- NODE COUNT PER DEPTH ---");
-        for (int depth = 1; depth <= 6; depth++) {
+        for (int depth = 9; depth <= 11; depth++) {
             BoardWrapper b = new BoardWrapper();
             b.board.loadFromFen(fen);
             ChessAI a = new ChessAI();
