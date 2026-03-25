@@ -9,6 +9,9 @@ build-image:
         - "--host=tcp://0.0.0.0:2375"
         - "--tls=false"
 
+  variables:
+    IMAGE_TAG: "registry.eliashouse.ddns.net/root/chessabalgo:${CI_COMMIT_REF_SLUG:-latest}"
+
   before_script:
     - docker info
     - echo "$CI_REGISTRY_PASSWORD" | docker login registry.eliashouse.ddns.net -u "$CI_REGISTRY_USER" --password-stdin
