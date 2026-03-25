@@ -12,7 +12,9 @@ build-image:
   services:
     - name: docker:dind
       # Tell Docker-in-Docker that this registry is HTTP
-      command: ["--insecure-registry=registry.eliashouse.ddns.net"]
+      command:
+        - "--insecure-registry=registry.eliashouse.ddns.net"
+        - "--tls=false"
 
   before_script:
     # Login to GitLab registry over HTTP
