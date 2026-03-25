@@ -119,7 +119,7 @@ public class ChessAI {
                 }
             }
             startDepth++;
-        } while (System.currentTimeMillis() - startTime <= (max_time_seconds * 1000) ||
+        } while (System.currentTimeMillis() < searchDeadline ||
                 (isPonderThread && this.ponderThreadShouldRun));
         if (bestMove.move == null) {
             System.out.println("AI did not find move, picking first");
