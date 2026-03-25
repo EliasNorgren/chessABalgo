@@ -1,11 +1,5 @@
-stages:
-  - build
-
-variables:
-  DOCKER_HOST: tcp://docker:2375
-  DOCKER_TLS_CERTDIR: ""
-
 build-image:
+  stage: build   # 🔹 MUST match one of your stages
   image: docker:latest
 
   services:
