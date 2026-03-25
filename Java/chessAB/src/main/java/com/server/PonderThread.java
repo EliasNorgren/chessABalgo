@@ -34,7 +34,7 @@ public class PonderThread extends Thread{
         BoardWrapper boardWrapper = new BoardWrapper(board);
 //        ai.resultFuture = this.resultFuture;
         ai.semaphore = this.semaphore;
-        ai.getBestMove(boardWrapper, 60, true);
+        ai.getBestMove(boardWrapper, 240, true);
         System.out.println("Ponder thread exiting " + this.threadId());
         exitRunner.run();
     }

@@ -25,6 +25,7 @@ public class ChessAI {
     private boolean isPonderThread = false;
 
     private long nodeCount = 0;
+    private long searchDeadline = Long.MAX_VALUE; // epoch ms; alphaBeta aborts when exceeded
 
     // Killer moves: killerMoves[ply][0..1] — quiet moves that caused beta cutoffs at this ply
     private Move[][] killerMoves;
@@ -40,6 +41,7 @@ public class ChessAI {
         nodeCount = 0;
         killerMoves = new Move[depth + 2][2];
         historyTable = new int[65][65]; // 64 squares + NONE (ordinal 64)
+        searchDeadline = Long.MAX_VALUE; // no time limit for fixed-depth searches
         return alphaBeta(board, depth, Integer.MIN_VALUE + depth, Integer.MAX_VALUE - depth);
     }
 
@@ -71,6 +73,7 @@ public class ChessAI {
         AlphaBeta bestMove = new AlphaBeta(null, value, new Stack<>());
         int startDepth = 1;
         long startTime = System.currentTimeMillis();
+        this.searchDeadline = startTime + (long) (max_time_seconds * 1000);
         int previousEval = this.evaluator.evalPos(boardWrapper);
         do {
             this.maxDepth = startDepth;
@@ -149,6 +152,10 @@ public class ChessAI {
         int ply = this.maxDepth - depth;
 
         if (!ponderThreadShouldRun && isPonderThread) {
+            return new AlphaBeta(null, 0, new Stack<>());
+        }
+
+        if (System.currentTimeMillis() >= searchDeadline) {
             return new AlphaBeta(null, 0, new Stack<>());
         }
 
