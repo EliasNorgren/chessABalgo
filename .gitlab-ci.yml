@@ -16,7 +16,7 @@ build-image:
 
   before_script:
     # Login to GitLab registry over HTTP
-    - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin registry.eliashouse.ddns.net
+    - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin http://registry.eliashouse.ddns.net
 
   script:
     # Build and push image
