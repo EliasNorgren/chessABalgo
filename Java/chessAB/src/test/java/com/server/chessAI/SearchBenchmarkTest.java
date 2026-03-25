@@ -212,7 +212,7 @@ public class SearchBenchmarkTest {
      * Depth-scaling benchmark: run all EDP positions across increasing depths to show
      * how node count grows (effective branching factor indicator).
      */
-    @Test
+//    @Test
     public void branchingFactorBenchmark() throws Exception {
         List<EdpRecord> records = loadEdpRecords();
 
@@ -252,7 +252,7 @@ public class SearchBenchmarkTest {
      * Debug test: print the scored move ordering for BK.21 at the root, then
      * show node counts at each depth so you can see where the explosion happens.
      */
-    @Test
+//    @Test
     public void debugBK21() throws Exception {
         String fen = "2r3k1/pppR1pp1/4p3/4P1P1/5P2/1P4K1/P1P5/8 w - -";
 

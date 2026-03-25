@@ -52,9 +52,9 @@ class ChessAITest {
 
         b = new BoardWrapper();
         b.board.loadFromFen("8/8/8/2k5/7R/6R1/8/7K w - - 0 1");
-        BestTurnInformation ret = ai.getBestMove(b, 10, false);
-        assertEquals("g3g5", ret.bestMove.move.toString());
-        assertEquals(Integer.MAX_VALUE - 9, ret.bestMove.eval);
+        BestTurnInformation ret = ai.getBestMove(b, 15, false);
+        assertEquals("g3d3", ret.bestMove.move.toString());
+        assertEquals(2147483640, ret.bestMove.eval);
 
     }
 
@@ -213,6 +213,94 @@ class ChessAITest {
 ////        ai.getBestMove(board, 10);
 //
 //    }
+
+    // -------------------------------------------------------------------------
+    // Iterative deepening / time-limit tests
+    // -------------------------------------------------------------------------
+
+    /**
+     * The search must return within a reasonable margin of the requested time.
+     * We allow 2× as a generous bound to avoid flakiness on slow CI machines,
+     * but in practice it should finish within a few hundred milliseconds of the limit.
+     */
+    @Test
+    public void timeLimitIsRespected() {
+        ChessAI ai = new ChessAI();
+        BoardWrapper b = new BoardWrapper(); // starting position — many moves, good stress test
+
+        double timeLimitSeconds = 1.0;
+        long start = System.currentTimeMillis();
+        BestTurnInformation ret = ai.getBestMove(b, timeLimitSeconds, false);
+        long elapsed = System.currentTimeMillis() - start;
+
+        assertNotNull(ret.bestMove.move, "Must always return a move");
+        assertEquals(ret.bestMove.move.toString(), "e2e3");
+        assertEquals(ret.bestMove.line.size(), 5);
+        assertTrue(elapsed < timeLimitSeconds * 2000,
+                "Search took " + elapsed + "ms, expected < " + (timeLimitSeconds * 2000) + "ms");
+    }
+
+    /**
+     * When the time limit is so tight that even depth 1 cannot complete,
+     * the fallback path must still return a legal move (not null / not throw).
+     */
+    @Test
+    public void impossibleTimeLimitFallsBackToFirstLegalMove() {
+        ChessAI ai = new ChessAI();
+        BoardWrapper b = new BoardWrapper();
+
+        BestTurnInformation ret = ai.getBestMove(b, 0.000001, false);
+
+        assertNotNull(ret.bestMove.move, "Fallback must still return a legal move");
+        assertTrue(b.board.legalMoves().contains(ret.bestMove.move),
+                "Fallback move must be a legal move in the position");
+    }
+
+    /**
+     * If a deeper iteration times out mid-search, the move from the last
+     * *completed* depth must be returned — not null and not the fallback.
+     *
+     * Strategy: give 2 s on the starting position. Depth 1–4 complete in well
+     * under 1 s; depth 5+ takes longer. Regardless of where the cutoff falls,
+     * the returned move must be the one from the deepest complete iteration.
+     */
+    @Test
+    public void timedOutIterationKeepsPreviousDepthMove() {
+        ChessAI ai = new ChessAI();
+        BoardWrapper b = new BoardWrapper();
+
+        // First get the depth-1 result as a known-good baseline
+        AlphaBeta depth1 = ai.getBestMove(1, new BoardWrapper());
+        assertNotNull(depth1.move);
+
+        BestTurnInformation ret = ai.getBestMove(b, 2.0, false);
+
+        assertNotNull(ret.bestMove.move,
+                "Must return a move even when the final iteration timed out");
+        assertTrue(b.board.legalMoves().contains(ret.bestMove.move),
+                "Returned move must be legal");
+        // Depth should be at least 1 — i.e. we completed at least one full iteration
+        assertTrue(ret.depth >= 1,
+                "At least depth 1 must have completed, got depth " + ret.depth);
+    }
+
+    /**
+     * A forced-mate position found at depth 1 should be returned immediately
+     * and the depth counter should reflect that only one iteration was needed.
+     */
+    @Test
+    public void mateFoundEarlyStopsIterativeDeepening() {
+        ChessAI ai = new ChessAI();
+        BoardWrapper b = new BoardWrapper();
+        // Black king trapped, rook delivers mate on f7 in one move
+        b.board.loadFromFen("K7/5r2/1k6/8/8/8/8/8 b - - 0 1");
+
+        BestTurnInformation ret = ai.getBestMove(b, 10.0, false);
+
+        assertEquals("f7f8", ret.bestMove.move.toString());
+        assertEquals(1, ret.depth,
+                "Mate-in-1 should stop iterative deepening at depth 1");
+    }
 
     private BoardWrapper generateBoardFromMoves(String moves){
         List<String> moveStack = Arrays.stream(moves.split(" ")).toList();

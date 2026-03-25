@@ -26,6 +26,7 @@ public class ChessAI {
 
     private long nodeCount = 0;
     private long searchDeadline = Long.MAX_VALUE; // epoch ms; alphaBeta aborts when exceeded
+    private boolean searchAborted = false;        // set true whenever the deadline fires mid-search
 
     // Killer moves: killerMoves[ply][0..1] — quiet moves that caused beta cutoffs at this ply
     private Move[][] killerMoves;
@@ -79,6 +80,7 @@ public class ChessAI {
             this.maxDepth = startDepth;
             // Reset killers per iteration (they are ply-indexed to current maxDepth)
             killerMoves = new Move[startDepth + 2][2];
+            searchAborted = false;
 
             int aspirationWindow = 50;
             int alpha = Math.max(Integer.MIN_VALUE + startDepth, previousEval - aspirationWindow);
@@ -86,10 +88,22 @@ public class ChessAI {
 
             AlphaBeta bestMoveAtThisDepth = alphaBeta(boardWrapper.copy(), startDepth, alpha, beta);
 
+            if (searchAborted) {
+                // Iteration was incomplete — discard result and keep previous depth's move
+                if (bestMove.move != null) break;
+                continue; // depth 1 timed out — fall through to fallback below
+            }
+
             if (bestMoveAtThisDepth.eval <= alpha || bestMoveAtThisDepth.eval >= beta) {
-                // If evaluation was outside the window, re-search normally
+                // Evaluation was outside the aspiration window — re-search with full window
+                searchAborted = false;
                 bestMoveAtThisDepth = alphaBeta(boardWrapper.copy(), startDepth,
                         Integer.MIN_VALUE + startDepth, Integer.MAX_VALUE - startDepth);
+            }
+
+            if (searchAborted) {
+                if (bestMove.move != null) break;
+                continue;
             }
 
             bestMove = bestMoveAtThisDepth;
@@ -156,6 +170,7 @@ public class ChessAI {
         }
 
         if (System.currentTimeMillis() >= searchDeadline) {
+            searchAborted = true;
             return new AlphaBeta(null, 0, new Stack<>());
         }
 
