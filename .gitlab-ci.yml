@@ -2,20 +2,20 @@ stages:
   - build
 
 variables:
-  IMAGE_TAG: registry.eliashouse.ddns.net/root/chessabalgo:$CI_COMMIT_REF_SLUG
+  DOCKER_HOST: tcp://docker:2375
+  DOCKER_TLS_CERTDIR: ""
 
 build-image:
-  stage: build
   image: docker:latest
 
   services:
     - name: docker:dind
       command:
         - "--insecure-registry=registry.eliashouse.ddns.net"
+        - "--host=tcp://0.0.0.0:2375"
         - "--tls=false"
 
   before_script:
-    # 🔥 Force HTTP explicitly
     - docker info
     - echo "$CI_REGISTRY_PASSWORD" | docker login registry.eliashouse.ddns.net -u "$CI_REGISTRY_USER" --password-stdin
 
