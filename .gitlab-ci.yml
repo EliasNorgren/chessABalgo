@@ -10,7 +10,7 @@ build-image:
         - "--tls=false"
 
   variables:
-    IMAGE_TAG: "registry.eliashouse.ddns.net/root/chessabalgo:${CI_COMMIT_REF_SLUG:-latest}"
+    IMAGE_TAG: "registry.eliashouse.ddns.net/root/chessabalgo:latest"
 
   before_script:
     - docker info
