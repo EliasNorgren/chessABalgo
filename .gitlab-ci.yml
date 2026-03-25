@@ -2,8 +2,11 @@ stages:
   - build
 
 variables:
-  # Tag images with GitLab registry hostname, no :80
   IMAGE_TAG: registry.eliashouse.ddns.net/root/chessabalgo:$CI_COMMIT_REF_SLUG
+
+  # 🔥 REQUIRED for dind without TLS
+  DOCKER_HOST: tcp://docker:2375
+  DOCKER_TLS_CERTDIR: ""
 
 build-image:
   stage: build
@@ -11,17 +14,16 @@ build-image:
 
   services:
     - name: docker:dind
-      # Tell Docker-in-Docker that this registry is HTTP
       command:
         - "--insecure-registry=registry.eliashouse.ddns.net"
         - "--tls=false"
 
   before_script:
-    # Login to GitLab registry over HTTP
-    - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin http://registry.eliashouse.ddns.net
+    # 🔥 Force HTTP explicitly
+    - docker info
+    - echo "$CI_REGISTRY_PASSWORD" | docker login registry.eliashouse.ddns.net -u "$CI_REGISTRY_USER" --password-stdin
 
   script:
-    # Build and push image
     - docker build -t "$IMAGE_TAG" Java/chessAB/
     - docker push "$IMAGE_TAG"
 
